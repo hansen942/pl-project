@@ -1,0 +1,24 @@
+### Starting build.
+# Target: tests.ml.depends, tags: { extension:ml, file:tests.ml, ocaml, ocamldep, quiet }
+ocamldep.opt -modules tests.ml > tests.ml.depends # cached
+# Target: definitions.ml.depends, tags: { extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
+ocamldep.opt -modules definitions.ml > definitions.ml.depends # cached
+# Target: definitions.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
+ocamlc.opt -c -o definitions.cmo definitions.ml # cached
+# Target: evallambda.mli.depends, tags: { extension:mli, file:evallambda.mli, ocaml, ocamldep, quiet }
+ocamldep.opt -modules evallambda.mli > evallambda.mli.depends # cached
+# Target: evallambda.cmi, tags: { byte, compile, extension:mli, file:evallambda.mli, interf, ocaml, quiet }
+ocamlc.opt -c -o evallambda.cmi evallambda.mli # cached
+# Target: tests.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:tests.cmo, file:tests.ml, implem, ocaml, quiet }
+ocamlc.opt -c -o tests.cmo tests.ml # cached
+# Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
+# Target: evallambda.ml.depends, tags: { extension:ml, file:evallambda.ml, ocaml, ocamldep, quiet }
+ocamldep.opt -modules evallambda.ml > evallambda.ml.depends
+# Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o evallambda.cmx evallambda.ml
+# Target: tests.cmx, tags: { compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o tests.cmx tests.ml
+# Target: tests.native, tags: { dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }
+ocamlopt.opt definitions.cmx evallambda.cmx tests.cmx -o tests.native
+# Compilation successful.
