@@ -1,0 +1,349 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<link rel="stylesheet" href="style.css" type="text/css">
+<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="Start" href="index.html">
+<link rel="Up" href="index.html">
+<link title="Index of types" rel=Appendix href="index_types.html">
+<link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of modules" rel=Appendix href="index_modules.html">
+<link title="Definitions" rel="Chapter" href="Definitions.html"><title>Definitions</title>
+</head>
+<body>
+<div class="navbar">&nbsp;<a class="up" href="index.html" title="Index">Up</a>
+&nbsp;</div>
+<h1>Module <a href="type_Definitions.html">Definitions</a></h1>
+
+<pre><span id="MODULEDefinitions"><span class="keyword">module</span> Definitions</span>: <code class="code">sig</code> <a href="Definitions.html">..</a> <code class="code">end</code></pre><div class="info module top">
+<div class="info-desc">
+<p>This file contains all the shared types that the other modules need and also some functions that allow these types to be displayed.</p>
+</div>
+</div>
+<hr width="100%">
+
+<pre><span id="TYPEuser_var_name"><span class="keyword">type</span> <code class="type"></code>user_var_name</span> = <code class="type">string</code> </pre>
+<div class="info ">
+<div class="info-desc">
+<p>users write programs where identifiers are strings</p>
+</div>
+</div>
+
+
+<pre><code><span id="TYPEvar_name"><span class="keyword">type</span> <code class="type"></code>var_name</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvar_name.Sub"><span class="constructor">Sub</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTvar_name.Name"><span class="constructor">Name</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a></code></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p><code class="code">var_name</code> can use integers because this makes getting new variable names easier</p>
+</div>
+</div>
+
+
+<pre><code><span id="TYPEexpr"><span class="keyword">type</span> <code class="type"></code>expr</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Int"><span class="constructor">Int</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Var"><span class="constructor">Var</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Lambda"><span class="constructor">Lambda</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEvar_name">var_name</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Application"><span class="constructor">Application</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.If"><span class="constructor">If</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Bool"><span class="constructor">Bool</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Plus"><span class="constructor">Plus</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Times"><span class="constructor">Times</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Eq"><span class="constructor">Eq</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p><code class="code">expr</code> is the type of our untyped expressions. It is essentially the applied lambda calculus.</p>
+</div>
+</div>
+
+
+<pre><code><span id="TYPEsugar"><span class="keyword">type</span> <code class="type"></code>sugar</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.LetRec"><span class="constructor">LetRec</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.Let"><span class="constructor">Let</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.Z"><span class="constructor">Z</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.Base"><span class="constructor">Base</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p><code class="code">sugar</code> is supposed to represent syntactic sugar over the base language, however, sugar is somehwat a misnomer.
+  This is because a properly typed program cannot contain <code class="code">Z</code>, the Z combinator, however during desugaring we introduce <code class="code">Z</code> in the untyped base language when dealing with <code class="code">LetRec</code> expressions.
+  Dealing with the recursion in two different ways allows programs to type check even though they will be desugared to an untypeable program.
+ It is worth noting here that let rec will act recursively on ALL expressions, not just functions, so that <code class="code">let x = 1 in let rec x = x+1 in x</code> will not terminate, but <code class="code">let x = 1 in let x = x+1 in x</code> will terminate and have value <code class="code">2</code>.</p>
+</div>
+</div>
+
+
+<pre><span id="VALz"><span class="keyword">val</span> z</span> : <code class="type"><a href="Definitions.html#TYPEexpr">expr</a></code></pre><div class="info ">
+<div class="info-desc">
+<p><code class="code">z</code> is the Z-combinator</p>
+</div>
+</div>
+
+<pre><span id="VALdesugar"><span class="keyword">val</span> desugar</span> : <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> -> <a href="Definitions.html#TYPEexpr">expr</a></code></pre>
+<pre><span id="VALis_val"><span class="keyword">val</span> is_val</span> : <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> -> bool</code></pre>
+<pre><span id="VALstring_of_var"><span class="keyword">val</span> string_of_var</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> -> string</code></pre>
+<pre><span id="VALstring_of_expr"><span class="keyword">val</span> string_of_expr</span> : <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> -> string</code></pre>
+<pre><span id="VALstring_of_sugar"><span class="keyword">val</span> string_of_sugar</span> : <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> -> string</code></pre>
+<pre><code><span id="TYPEexpr_type"><span class="keyword">type</span> <code class="type"></code>expr_type</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr_type.Integer"><span class="constructor">Integer</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr_type.Boolean"><span class="constructor">Boolean</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr_type.Fun"><span class="constructor">Fun</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr_type.Unit"><span class="constructor">Unit</span></span></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p><code class="code">expr_type</code> is the type of types in our language. Hopefully we will extend this to include user-defined types as well.</p>
+</div>
+</div>
+
+
+<pre><code><span id="TYPEtyped_expr"><span class="keyword">type</span> <code class="type"></code>typed_expr</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TInt"><span class="constructor">TInt</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TBool"><span class="constructor">TBool</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TVar"><span class="constructor">TVar</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> option</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TPlus"><span class="constructor">TPlus</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TTimes"><span class="constructor">TTimes</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TLambda"><span class="constructor">TLambda</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TApplication"><span class="constructor">TApplication</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TIf"><span class="constructor">TIf</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p>Elements of <code class="code">typed_expr</code> represent expressions which are annotated with types.
+    The only weird definition is that of <code class="code">TVar</code> which allows an optional type annotation.
+    This is so that when we desugar from a <code class="code">typed_sugar</code> we can avoid putting in the Z
+    combinators and all recursive references will be annotated with the type that they will
+    have explicitly (since otherwise they would look like unbound variables)</p>
+</div>
+</div>
+
+
+<pre><code><span id="TYPEtyped_sugar"><span class="keyword">type</span> <code class="type"></code>typed_sugar</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_sugar.TLet"><span class="constructor">TLet</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_sugar.TLetRec"><span class="constructor">TLetRec</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_sugar.TBase"><span class="constructor">TBase</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p><code class="code">typed_sugar</code> is a sugary version of <code class="code">typed_expr</code>.
+    The idea is that <code class="code">typed_sugar</code> keeps track of where <code class="code">let</code> and <code class="code">let rec</code> are used so that we can have the following workflow: <code class="code">typed_sugar</code> is desugared into a <code class="code">typed_expr</code> (throwing away the <code class="code">let recs</code> and giving all recursively referenced variables the type of the binder they should have) which is type checked. If it passes we want to evaluate, so the original <code class="code">typed_sugar</code> is stripped of type annotations to become a regular <code class="code">sugar</code>, which can then be evaluated.</p>
+</div>
+</div>
+
+
+<pre><code><span id="TYPEdef"><span class="keyword">type</span> <code class="type">'a</code> def</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdef.Value"><span class="constructor">Value</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * 'a</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdef.NewSum"><span class="constructor">NewSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a><br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> list) list</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTdef.NewProd"><span class="constructor">NewProd</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> list</code></code></td>
+
+</tr></table>
+
+<div class="info ">
+<div class="info-desc">
+<p><code class="code">def</code> is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet.</p>
+</div>
+</div>
+
+
+<pre><span id="TYPEprog"><span class="keyword">type</span> <code class="type"></code>prog</span> = <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> <a href="Definitions.html#TYPEdef">def</a> list * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a> option</code> </pre>
+
+</body></html>
