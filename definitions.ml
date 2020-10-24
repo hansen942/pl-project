@@ -8,8 +8,6 @@ type var_name =
 | Sub of int
 | Name of user_var_name 
 
-
-
 (** [expr] is the type of our untyped expressions. It is essentially the applied lambda calculus. *)
 and expr =
 | Int of int
@@ -23,6 +21,10 @@ and expr =
 | Eq of expr * expr
 (*| Lazy of expr ref*)
 
+(*module Compare_VName : Map.OrderedType = struct
+type t = var_name
+let compare = compare 
+end*)
 (** [sugar] is supposed to represent syntactic sugar over the base language, however, sugar is somehwat a misnomer.
   This is because a properly typed program cannot contain [Z], the Z combinator, however during desugaring we introduce [Z] in the untyped base language when dealing with [LetRec] expressions.
   Dealing with the recursion in two different ways allows programs to type check even though they will be desugared to an untypeable program.
@@ -77,8 +79,8 @@ let rec string_of_sugar : sugar -> string = function
 
 (** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
 type expr_type =
-| Integer of int
-| Boolean of bool
+| Integer
+| Boolean
 | Fun of expr_type * expr_type
 | Unit
 (*TODO: these extensions*)
@@ -90,27 +92,36 @@ and user_type =
 | NamedProd of user_var_name * (expr_type list)
 *)
 
-(** Elements of [typed_expr] represent expressions which are annotated with types.
-    The only weird definition is that of [TVar] which allows an optional type annotation.
-    This is so that when we desugar from a [typed_sugar] we can avoid putting in the Z
-    combinators and all recursive references will be annotated with the type that they will
-    have explicitly (since otherwise they would look like unbound variables)*)
+let rec string_of_type = function
+| Integer -> "int"
+| Boolean -> "bool"
+| Fun (t1,t2) ->
+  let s1 =
+    match t1 with
+    | Fun _ -> Printf.sprintf "(%s)" (string_of_type t1)
+    | _ -> string_of_type t1
+  in
+  Printf.sprintf "%s →  %s" s1 (string_of_type t2)
+| Unit -> "unit"
+
+(** Elements of [typed_expr] represent expressions which are annotated with types.*)
 type typed_expr =
 | TInt of int
 | TBool of bool
-| TVar of var_name * (expr_type option)
+| TVar of var_name
 | TPlus of typed_expr * typed_expr
 | TTimes of typed_expr * typed_expr
 (*| TVar of var_name*)
 | TLambda of typed_expr * var_name * expr_type
 | TApplication of typed_expr * typed_expr
 | TIf of typed_expr * typed_expr * typed_expr
+| TEq of typed_expr * typed_expr
 
 (** [typed_sugar] is a sugary version of [typed_expr].
-    The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used so that we can have the following workflow: [typed_sugar] is desugared into a [typed_expr] (throwing away the [let recs] and giving all recursively referenced variables the type of the binder they should have) which is type checked. If it passes we want to evaluate, so the original [typed_sugar] is stripped of type annotations to become a regular [sugar], which can then be evaluated.*)
+    The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
 type typed_sugar =
-| TLet of var_name * typed_expr * typed_expr
-| TLetRec of var_name * typed_expr * typed_expr
+| TLet of var_name * typed_sugar * typed_sugar
+| TLetRec of var_name * expr_type * typed_sugar * typed_sugar
 | TBase of typed_expr
 
 

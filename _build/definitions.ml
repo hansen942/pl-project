@@ -8,8 +8,6 @@ type var_name =
 | Sub of int
 | Name of user_var_name 
 
-
-
 (** [expr] is the type of our untyped expressions. It is essentially the applied lambda calculus. *)
 and expr =
 | Int of int
@@ -23,10 +21,14 @@ and expr =
 | Eq of expr * expr
 (*| Lazy of expr ref*)
 
+(*module Compare_VName : Map.OrderedType = struct
+type t = var_name
+let compare = compare 
+end*)
 (** [sugar] is supposed to represent syntactic sugar over the base language, however, sugar is somehwat a misnomer.
   This is because a properly typed program cannot contain [Z], the Z combinator, however during desugaring we introduce [Z] in the untyped base language when dealing with [LetRec] expressions.
   Dealing with the recursion in two different ways allows programs to type check even though they will be desugared to an untypeable program.
- It is worth noting here that let rec will act recursively on ALL expressions, not just functions, so that [let x = 1 in let rec x = x+1 in x] will not terminate, but [let x = 1 in let x = x+1 in x] will terminate.
+ It is worth noting here that let rec will act recursively on ALL expressions, not just functions, so that [let x = 1 in let rec x = x+1 in x] will not terminate, but [let x = 1 in let x = x+1 in x] will terminate and have value [2].
   *)
 type sugar = 
 | LetRec of var_name * sugar * sugar 
@@ -75,10 +77,10 @@ let rec string_of_sugar : sugar -> string = function
 | Z -> "Z"
 | Base e -> string_of_expr e
 
-(** [expr_type] is the type of types in our language. Atomic represents a type corresponding to a closure and so *)
+(** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
 type expr_type =
-| Integer of int
-| Boolean of bool
+| Integer
+| Boolean
 | Fun of expr_type * expr_type
 | Unit
 (*TODO: these extensions*)
@@ -90,23 +92,40 @@ and user_type =
 | NamedProd of user_var_name * (expr_type list)
 *)
 
+let rec string_of_type = function
+| Integer -> "int"
+| Boolean -> "bool"
+| Fun (t1,t2) ->
+  let s1 =
+    match t1 with
+    | Fun _ -> Printf.sprintf "(%s)" (string_of_type t1)
+    | _ -> string_of_type t1
+  in
+  Printf.sprintf "%s →  %s" s1 (string_of_type t2)
+| Unit -> "unit"
+
 (** Elements of [typed_expr] represent expressions which are annotated with types.*)
 type typed_expr =
 | TInt of int
 | TBool of bool
+| TVar of var_name
 | TPlus of typed_expr * typed_expr
 | TTimes of typed_expr * typed_expr
 (*| TVar of var_name*)
 | TLambda of typed_expr * var_name * expr_type
 | TApplication of typed_expr * typed_expr
 | TIf of typed_expr * typed_expr * typed_expr
+| TEq of typed_expr * typed_expr
 
+(** [typed_sugar] is a sugary version of [typed_expr].
+    The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
 type typed_sugar =
-| TLet of var_name * typed_expr * typed_expr
-| TLetRec of var_name * typed_expr * typed_expr
+| TLet of var_name * typed_sugar * typed_sugar
+| TLetRec of var_name * expr_type * typed_sugar * typed_sugar
 | TBase of typed_expr
 
-(** [def] is the type of a definition. These are used to update the environment before evaluating the program's main expression, if one exists. *)
+
+(** [def] is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet. *)
 type 'a def =
 | Value of user_var_name * 'a 
 | NewSum of user_var_name * ((user_var_name * (expr_type list)) list)
