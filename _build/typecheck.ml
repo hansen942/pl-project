@@ -92,29 +92,72 @@ let desugar (tsugar:typed_sugar) : typed_expr = desugar_help tsugar []
 *)
 (* this is all commented because the work of going through and putting type annotations on all the variables before type checking is basically as much work as just type checking it to start with *)
 
-let rec tcheck_simple : typed_expr -> (error_msg,expr_type) either = function
-| _ -> failwith "unimplemented"
+let undeclared_error v =  Printf.sprintf "The variable %s is undeclared" (string_of_var v)
+let inferred_mismatch e t reason found = Printf.sprintf "Expression %s was expected to have type %s because %s but its actual type is %s" (string_of_typed_expr e) (string_of_type t) reason (string_of_type found)
+let declared_mismatch_error v declared got = Printf.sprintf "%s had declared type %s but was equated to an expression of type %s" (string_of_var v) (string_of_type declared) (string_of_type got)
+
+let rec tcheck_simple venv : typed_expr -> (error_msg,expr_type) either = function
+| TInt _ -> return Integer 
+| TBool _ -> return Boolean 
+| TVar v -> (match assoc_opt v venv with Some t -> return t | None -> Left (undeclared_error v))
+| TPlus (e1,e2) ->
+  let* t1 = tcheck_simple venv e1 in
+  let* t2 = tcheck_simple venv e2 in
+  if t1 != Integer then Left (inferred_mismatch e1 Integer "it appears in a plus formula" t1) else
+  if t2 != Integer then Left (inferred_mismatch e2 Integer "it appears in a plus formula" t2) else
+  return Integer
+| TTimes (e1,e2) ->
+  let* t1 = tcheck_simple venv e1 in
+  let* t2 = tcheck_simple venv e2 in
+  if t1 <> Integer then Left (inferred_mismatch e1 Integer "it appears in a plus formula" t1) else
+  if t2 <> Integer then Left (inferred_mismatch e2 Integer "it appears in a plus formula" t2) else
+  return Integer
+| TLambda (e,v,tv) ->
+  let venv' = (v,tv)::venv in
+  let* tbody = tcheck_simple venv' e in
+  return (Fun(tv,tbody))
+| TApplication (e1,e2) ->
+  let* t1 = tcheck_simple venv e1 in
+  let* t2 = tcheck_simple venv e2 in
+  (match t1 with
+  | Fun (targ,treturn) ->
+    (
+      if targ <> t2 then Left (inferred_mismatch e2 targ (Printf.sprintf "it is given as an argument to %s which has type %s" (string_of_typed_expr e1) (string_of_type t1)) t1)
+      else return treturn
+    )
+    | _ -> Left (Printf.sprintf "%s is not a function (it has type %s), it cannot be applied" (string_of_typed_expr e1) (string_of_type t1))
+  )
+| TIf (e1,e2,e3) ->
+  let* t1 = tcheck_simple venv e1 in
+  let* t2 = tcheck_simple venv e2 in
+  let* t3 = tcheck_simple venv e3 in
+  if t1 <> Boolean then Left (inferred_mismatch e1 Boolean "it appears in the guard of an if expression" t1)
+  else if t2 <> t3 then Left (inferred_mismatch e3 t2 (Printf.sprintf "it appears as an alternative outcome to %s : %s in an if expression" (string_of_typed_expr e2) (string_of_type t2)) t3)
+  else return t2
+| TEq (e1,e2) ->
+  let* t1 = tcheck_simple venv e1 in
+  let* t2 = tcheck_simple venv e2 in
+  if t1 <> t2 then Left (inferred_mismatch e2 t1 (Printf.sprintf "it is compared to %s : %s" (string_of_typed_expr e1) (string_of_type t1)) t2)
+  else return Boolean
+    
+
+
 
 (** [tcheck t_expr] *)
-let rec tcheck : typed_sugar -> (error_msg,expr_type) either = function
-| TBase expr -> fun venv -> tcheck_simple expr venv
+let rec tcheck venv : typed_sugar -> (error_msg,expr_type) either = function
+| TBase expr -> tcheck_simple venv expr
 | TLet (v,e1,e2) ->
-  let* tv = tcheck e1 in
-  fun venv ->
-    tcheck e2 ((v,tv)::venv)
+  let* tv = tcheck venv e1 in
+  tcheck ((v,tv)::(remove_assoc v venv)) e2 
 | TLetRec (v,tv,e1,e2) ->
-  (fun venv ->
-  let venv' = (v,tv)::venv in
-  let* t1 = tcheck e1 venv' in
-  if t1 <> tv then Left (Prinft.sprintf "%s had declared type %s but was equated to an expression of type %s" (string_of_var v) (string_of_type tv) (string_of_type t1))
-  else
-  tcheck e2 venv')
+    let venv' = (v,tv)::(remove_assoc v venv) in
+    let* t1 = tcheck venv' e1 in
+    if t1 <> tv then Left (declared_mismatch_error v tv t1)
+    else
+    tcheck venv' e2 
 
   
-
-
-
 let typecheck sugar_e =
-  let* mtype = tcheck sugar_e in
+  let* mtype = tcheck [] sugar_e in
   return (mtype, strip sugar_e)
 

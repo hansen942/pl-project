@@ -117,6 +117,17 @@ type typed_expr =
 | TIf of typed_expr * typed_expr * typed_expr
 | TEq of typed_expr * typed_expr
 
+let rec string_of_typed_expr : typed_expr -> string = function
+| TInt n -> string_of_int n
+| TVar v -> string_of_var v
+| TBool b -> string_of_bool b
+| TEq (e1,e2) -> Printf.sprintf "%s = %s" (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TPlus (e1,e2) -> Printf.sprintf "%s + %s" (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TTimes (e1,e2) -> Printf.sprintf "%s * (%s)" (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TLambda (e,arg,t) -> Printf.sprintf "λ%s : %s.%s" (string_of_var arg) (string_of_type t) (string_of_typed_expr e) 
+| TApplication (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TIf (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_typed_expr e1) (string_of_typed_expr e2) (string_of_typed_expr e3)
+
 (** [typed_sugar] is a sugary version of [typed_expr].
     The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
 type typed_sugar =
@@ -124,6 +135,10 @@ type typed_sugar =
 | TLetRec of var_name * expr_type * typed_sugar * typed_sugar
 | TBase of typed_expr
 
+let rec string_of_typed_sugar : typed_sugar -> string = function
+| TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
+| TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
+| TBase e -> string_of_typed_expr e
 
 (** [def] is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet. *)
 type 'a def =

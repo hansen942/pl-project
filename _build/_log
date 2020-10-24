@@ -1,6 +1,6 @@
 ### Starting build.
 # Target: tests.ml.depends, tags: { extension:ml, file:tests.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules tests.ml > tests.ml.depends # cached
+ocamldep.opt -modules tests.ml > tests.ml.depends
 # Target: definitions.ml.depends, tags: { extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
 ocamldep.opt -modules definitions.ml > definitions.ml.depends # cached
 # Target: definitions.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
@@ -14,7 +14,7 @@ ocamldep.opt -modules typecheck.mli > typecheck.mli.depends # cached
 # Target: typecheck.cmi, tags: { byte, compile, extension:mli, file:typecheck.mli, interf, ocaml, quiet }
 ocamlc.opt -c -o typecheck.cmi typecheck.mli # cached
 # Target: tests.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:tests.cmo, file:tests.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o tests.cmo tests.ml # cached
+ocamlc.opt -c -o tests.cmo tests.ml
 # Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
 # Target: evallambda.ml.depends, tags: { extension:ml, file:evallambda.ml, ocaml, ocamldep, quiet }
@@ -22,25 +22,11 @@ ocamldep.opt -modules evallambda.ml > evallambda.ml.depends # cached
 # Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o evallambda.cmx evallambda.ml # cached
 # Target: typecheck.ml.depends, tags: { extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules typecheck.ml > typecheck.ml.depends
+ocamldep.opt -modules typecheck.ml > typecheck.ml.depends # cached
 # Target: typecheck.cmx, tags: { compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o typecheck.cmx typecheck.ml
-+ ocamlopt.opt -c -o typecheck.cmx typecheck.ml
-File "typecheck.ml", line 99, characters 8-508:
- 99 | ........tcheck : typed_sugar -> (error_msg,expr_type) either = function
-100 | | TBase expr -> fun venv -> tcheck_simple expr venv
-101 | | TLet (v,e1,e2) ->
-102 |   let* tv = tcheck e1 in
-103 |   fun venv ->
-...
-108 |   let* t1 = tcheck e1 venv' in
-109 |   if t1 <> tv then Left (Prinft.sprintf "%s had declared type %s but was equated to an expression of type %s" (string_of_var v) (string_of_type tv) (string_of_type t1))
-110 |   else
-111 |   tcheck e2 venv')
-Error: This expression has type 'a -> 'b -> 'c
-       but an expression was expected of type
-         'a -> (error_msg, Definitions.expr_type) either
-       Type 'b -> 'c is not compatible with type
-         (error_msg, Definitions.expr_type) either 
-Command exited with code 2.
-# Compilation unsuccessful.
+ocamlopt.opt -c -o typecheck.cmx typecheck.ml # cached
+# Target: tests.cmx, tags: { compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o tests.cmx tests.ml
+# Target: tests.native, tags: { dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }
+ocamlopt.opt definitions.cmx evallambda.cmx typecheck.cmx tests.cmx -o tests.native
+# Compilation successful.

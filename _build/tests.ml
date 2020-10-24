@@ -1,14 +1,13 @@
-open Evallambda
 open Definitions
 open Typecheck
-(* test that eval gives back values*)
+(* test that Evallambda.eval gives back values*)
 
 let test_on e =
-Printf.printf "evaluation of %s:" (string_of_sugar e);
+Printf.printf "Evallambda.evaluation of %s:" (string_of_sugar e);
 print_newline ();
-print_string (string_of_expr (eval (desugar e)));
+print_string (string_of_expr (Evallambda.eval (desugar e)));
 print_newline ()
-
+(*
 (*
 let _ = test_on (Base (Int 5))
 
@@ -46,4 +45,36 @@ let weird_rec =
   Let(x,Base(Int 1),Let(x, Base(Plus(Var x, Int 1)),Base (Var x)))
 
 let _ = test_on weird_non_rec
+*)
+
+
+let show_type texpr =
+  match typecheck texpr with
+  | Left msg -> print_endline msg
+  | Right t -> print_endline (string_of_type (fst t))
+(*let _ = show_type typed_int*)
+
+let tfact =
+  let n = Name "n" in
+  let fact = Name "tfact" in
+  TBase (TLambda (TIf(TEq(TVar n,TInt 0),TInt 1, TTimes(TVar n,TApplication (TVar fact, TPlus (TVar n,TInt (-1))))), n, Integer))
+let tfact5 = TLetRec (Name "tfact", Fun(Integer,Integer), tfact, TBase(TApplication (TVar (Name "tfact"),TInt 3))) 
+
+let full_eval texpr =
+  Printf.printf "starting on\n%s" (string_of_typed_sugar texpr); print_newline ();
+  match typecheck texpr with
+  | Left msg -> Printf.printf "Type checking failed with error %s" msg
+  | Right (t,e) ->
+    Printf.printf "type checking passed...\ntype of expression is %s" (string_of_type t);
+    print_newline ();
+    print_endline "evaluating expression...";
+    let result = Evallambda.eval (desugar e) in
+    print_endline "evaluates to";
+    print_endline (string_of_expr result)
+
+let _ = full_eval tfact5
+
+let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
+let _ = full_eval nested_let
+
 
