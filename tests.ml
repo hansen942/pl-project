@@ -52,7 +52,6 @@ let show_type texpr =
   match typecheck texpr with
   | Left msg -> print_endline msg
   | Right t -> print_endline (string_of_type (fst t))
-(*let _ = show_type typed_int*)
 
 let tfact =
   let n = Name "n" in
@@ -62,19 +61,21 @@ let tfact5 = TLetRec (Name "tfact", Fun(Integer,Integer), tfact, TBase(TApplicat
 
 let full_eval texpr =
   Printf.printf "starting on\n%s" (string_of_typed_sugar texpr); print_newline ();
-  match typecheck texpr with
-  | Left msg -> Printf.printf "Type checking failed with error %s" msg
-  | Right (t,e) ->
-    Printf.printf "type checking passed...\ntype of expression is %s" (string_of_type t);
-    print_newline ();
-    print_endline "evaluating expression...";
-    let result = Evallambda.eval (desugar e) in
-    print_endline "evaluates to";
-    print_endline (string_of_expr result)
+    print_endline "type checking...";
+    match typecheck texpr with
+    | Left msg -> Printf.printf "type checking failed with error %s" msg
+    | Right (t,e) ->
+      Printf.printf "type of expression is %s" (string_of_type t);
+      print_newline ();
+      print_endline "evaluating expression...";
+      let result = Evallambda.eval (desugar e) in
+      print_endline (string_of_expr result)
 
 let _ = full_eval tfact5
 
 let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
 let _ = full_eval nested_let
 
+let test_print = TLet(Name "x", TBase (TInt 1), TBase (TPrint (TVar (Name "x"))))
+let _ = full_eval test_print
 

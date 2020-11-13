@@ -1,30 +1,30 @@
 ### Starting build.
 # Target: tests.ml.depends, tags: { extension:ml, file:tests.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules tests.ml > tests.ml.depends
+ocamldep.opt -modules tests.ml > tests.ml.depends # cached
 # Target: definitions.ml.depends, tags: { extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules definitions.ml > definitions.ml.depends # cached
-# Target: definitions.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o definitions.cmo definitions.ml # cached
+ocamldep.opt -modules definitions.ml > definitions.ml.depends
 # Target: evallambda.mli.depends, tags: { extension:mli, file:evallambda.mli, ocaml, ocamldep, quiet }
 ocamldep.opt -modules evallambda.mli > evallambda.mli.depends # cached
-# Target: evallambda.cmi, tags: { byte, compile, extension:mli, file:evallambda.mli, interf, ocaml, quiet }
-ocamlc.opt -c -o evallambda.cmi evallambda.mli # cached
+# Target: definitions.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
+ocamlc.opt -c -o definitions.cmo definitions.ml
 # Target: typecheck.mli.depends, tags: { extension:mli, file:typecheck.mli, ocaml, ocamldep, quiet }
 ocamldep.opt -modules typecheck.mli > typecheck.mli.depends # cached
+# Target: evallambda.cmi, tags: { byte, compile, extension:mli, file:evallambda.mli, interf, ocaml, quiet }
+ocamlc.opt -c -o evallambda.cmi evallambda.mli
 # Target: typecheck.cmi, tags: { byte, compile, extension:mli, file:typecheck.mli, interf, ocaml, quiet }
-ocamlc.opt -c -o typecheck.cmi typecheck.mli # cached
+ocamlc.opt -c -o typecheck.cmi typecheck.mli
 # Target: tests.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:tests.cmo, file:tests.ml, implem, ocaml, quiet }
 ocamlc.opt -c -o tests.cmo tests.ml
-# Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
 # Target: evallambda.ml.depends, tags: { extension:ml, file:evallambda.ml, ocaml, ocamldep, quiet }
 ocamldep.opt -modules evallambda.ml > evallambda.ml.depends # cached
-# Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o evallambda.cmx evallambda.ml # cached
+# Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o definitions.cmx definitions.ml
 # Target: typecheck.ml.depends, tags: { extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
 ocamldep.opt -modules typecheck.ml > typecheck.ml.depends # cached
+# Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o evallambda.cmx evallambda.ml
 # Target: typecheck.cmx, tags: { compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o typecheck.cmx typecheck.ml # cached
+ocamlopt.opt -c -o typecheck.cmx typecheck.ml
 # Target: tests.cmx, tags: { compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o tests.cmx tests.ml
 # Target: tests.native, tags: { dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }

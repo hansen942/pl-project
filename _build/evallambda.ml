@@ -49,6 +49,8 @@ let rec fv : expr -> var_name list = function
 | Plus (e1,e2) -> naive_list_union (fv e1) (fv e2)
 | Times (e1,e2) -> naive_list_union (fv e1) (fv e2)
 | Eq (e1,e2) -> naive_list_union (fv e1) (fv e2)
+| Unit -> []
+| Print e -> fv e
 
 
 (** [sub e e_x x] gives back [e] with free occurrences of [x] replaced by [e_x].*)
@@ -92,6 +94,8 @@ let rec sub e e_x x : (expr, eval_state) state =
     let* e1' = subin e1 in
     let* e2' = subin e2 in
     return (Eq (e1',e2'))
+  | Unit -> return Unit
+  | Print e -> let* e' = subin e in return (Print e')
 
 and smallstep e : (expr, eval_state) state =
 match e with
@@ -127,9 +131,12 @@ match e with
 | Bool _ -> return e
 | Lambda _ -> return e
 | Var _ -> return e
+| Unit -> return Unit
+| Print e ->
+ fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
 
 
-let rec eval' e s =
+and eval' e s =
   if is_val e then e else
   let e', s' = smallstep e s in eval' e' s'
 

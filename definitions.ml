@@ -19,6 +19,8 @@ and expr =
 | Plus of expr * expr
 | Times of expr * expr
 | Eq of expr * expr
+| Unit
+| Print of expr
 (*| Lazy of expr ref*)
 
 (*module Compare_VName : Map.OrderedType = struct
@@ -53,6 +55,7 @@ let is_val = function
 | Int _ -> true
 | Bool _ -> true
 | Lambda _ -> true
+| Unit -> true
 | _ -> false
 
 let string_of_var v : string =
@@ -70,6 +73,8 @@ let rec string_of_expr : expr -> string = function
 | Lambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_expr e) 
 | Application (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_expr e1) (string_of_expr e2)
 | If (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
+| Unit -> "()"
+| Print e -> Printf.sprintf "print %s" (string_of_expr e)
 
 let rec string_of_sugar : sugar -> string = function
 | Let (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
@@ -82,7 +87,7 @@ type expr_type =
 | Integer
 | Boolean
 | Fun of expr_type * expr_type
-| Unit
+| UnitType
 (*TODO: these extensions*)
 (*| Prod of expr_type list
 | User of user_type
@@ -102,7 +107,7 @@ let rec string_of_type = function
     | _ -> string_of_type t1
   in
   Printf.sprintf "%s →  %s" s1 (string_of_type t2)
-| Unit -> "unit"
+| UnitType -> "unit"
 
 (** Elements of [typed_expr] represent expressions which are annotated with types.*)
 type typed_expr =
@@ -116,6 +121,8 @@ type typed_expr =
 | TApplication of typed_expr * typed_expr
 | TIf of typed_expr * typed_expr * typed_expr
 | TEq of typed_expr * typed_expr
+| TUnit
+| TPrint of typed_expr
 
 let rec string_of_typed_expr : typed_expr -> string = function
 | TInt n -> string_of_int n
@@ -127,6 +134,8 @@ let rec string_of_typed_expr : typed_expr -> string = function
 | TLambda (e,arg,t) -> Printf.sprintf "λ%s : %s.%s" (string_of_var arg) (string_of_type t) (string_of_typed_expr e) 
 | TApplication (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TIf (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_typed_expr e1) (string_of_typed_expr e2) (string_of_typed_expr e3)
+| TUnit -> "()"
+| TPrint e -> (Printf.sprintf "print %s" (string_of_typed_expr e))
 
 (** [typed_sugar] is a sugary version of [typed_expr].
     The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
@@ -139,6 +148,12 @@ let rec string_of_typed_sugar : typed_sugar -> string = function
 | TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
 | TBase e -> string_of_typed_expr e
+
+let printable : expr_type -> bool = function
+| UnitType -> true
+| Integer -> true
+| Boolean -> true
+| Fun _ -> false
 
 (** [def] is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet. *)
 type 'a def =
