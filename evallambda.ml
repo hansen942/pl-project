@@ -29,30 +29,6 @@ let draw_name : (var_name, eval_state) state =
   | Sub n -> (s,Sub (n+1))
   | _ -> failwith "evaluation state corrupted, unable to draw name"
 
-let rec naive_list_union' acc l1 = function
-| h::t -> if mem h l1 then naive_list_union' acc l1 t else naive_list_union' (h::acc) l1 t
-| [] -> acc @ l1
-
-(** [list_union l1 l2] is a list that contains all the elements of [l1] and [l2] with no repeats, assuming that [l1] and [l2] also contain no repeats.
-    Also note this is not tail recursive (because of use of [@] operator) and will have recursion depth = length of [l2]*)
-let naive_list_union = naive_list_union' []
-
-(** [fv e] gives a list containing all the free variables of [e].
-    Ideally, we would replace the list with a set but this requires defining an order on expressions so I'm just building it with lists first.*)
-let rec fv : expr -> var_name list = function
-| Int _ -> []
-| Var v -> [v]
-| Lambda (ebody,arg) -> filter (fun x -> not (x = arg)) (fv ebody)
-| Application (e1,e2) -> naive_list_union (fv e1) (fv e2)
-| If (e1,e2,e3) -> naive_list_union (fv e1) (naive_list_union (fv e2) (fv e3))
-| Bool _ -> []
-| Plus (e1,e2) -> naive_list_union (fv e1) (fv e2)
-| Times (e1,e2) -> naive_list_union (fv e1) (fv e2)
-| Eq (e1,e2) -> naive_list_union (fv e1) (fv e2)
-| Unit -> []
-| Print e -> fv e
-
-
 (** [sub e e_x x] gives back [e] with free occurrences of [x] replaced by [e_x].*)
 let rec sub e e_x x : (expr, eval_state) state =
   let subin e = sub e e_x x in

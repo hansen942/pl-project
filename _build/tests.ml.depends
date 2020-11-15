@@ -1,1 +1,1 @@
-tests.ml: Definitions Evallambda Printf Typecheck
+tests.ml: Definitions Typecheck

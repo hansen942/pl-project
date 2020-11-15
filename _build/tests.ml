@@ -2,11 +2,12 @@ open Definitions
 open Typecheck
 (* test that Evallambda.eval gives back values*)
 
-let test_on e =
+(*let test_on e =
 Printf.printf "Evallambda.evaluation of %s:" (string_of_sugar e);
 print_newline ();
 print_string (string_of_expr (Evallambda.eval (desugar e)));
 print_newline ()
+*)
 (*
 (*
 let _ = test_on (Base (Int 5))
@@ -47,7 +48,7 @@ let weird_rec =
 let _ = test_on weird_non_rec
 *)
 
-
+(*
 let show_type texpr =
   match typecheck texpr with
   | Left msg -> print_endline msg
@@ -78,4 +79,27 @@ let _ = full_eval nested_let
 
 let test_print = TLet(Name "x", TBase (TInt 1), TBase (TPrint (TVar (Name "x"))))
 let _ = full_eval test_print
+*)
+
+let show_type tsugar = print_endline (string_of_class_constrained_expr_type (fst (typecheck tsugar)))
+
+let id = TBase (TLambda (TVar (Name "x"),Name "x",TypeVar (Name "a")))
+
+let sum = TBase (TLambda (TLambda (TPlus (TVar (Name "x"), TVar (Name "y")), Name "x",TypeVar (Name "b")),Name "y",TypeVar (Name "a")))
+
+let f = TBase (TLambda (TPlus (TInt 2, TVar (Name "b")),Name "b", Boolean))
+
+let print = TBase (TLambda (TPrint(TVar (Name "x")),Name "x",TypeVar (Name "a")))
+
+let complicated = TBase (TLambda (TLambda(TPrint(TApplication(TVar (Name "f"), TVar (Name "x"))),Name "x",TypeVar (Name "b")),Name "f",TypeVar (Name "a")))
+
+let firstlet = TLet (Name "x", TBase(TInt 5), TBase(TVar (Name "x")))
+let id = TBase (TLambda(TVar (Name "x"), Name "x", TypeVar (Name "a")))
+let sndlet = TLetRec (Name "x", TypeVar(Name "b") , id, TBase(TVar (Name "x")))
+let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
+let interesting = TLet(Name "x", id, TBase(TApplication(TVar(Name "x"), TVar(Name "x"))))
+
+let _ = print_endline "entering new section"
+let _ = show_type interesting 
+
 
