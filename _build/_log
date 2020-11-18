@@ -1,24 +1,24 @@
 ### Starting build.
-# Target: tests.ml.depends, tags: { extension:ml, file:tests.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules tests.ml > tests.ml.depends # cached
-# Target: definitions.ml.depends, tags: { extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules definitions.ml > definitions.ml.depends # cached
-# Target: definitions.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o definitions.cmo definitions.ml # cached
-# Target: typecheck.mli.depends, tags: { extension:mli, file:typecheck.mli, ocaml, ocamldep, quiet }
-ocamldep.opt -modules typecheck.mli > typecheck.mli.depends # cached
-# Target: typecheck.cmi, tags: { byte, compile, extension:mli, file:typecheck.mli, interf, ocaml, quiet }
-ocamlc.opt -c -o typecheck.cmi typecheck.mli # cached
-# Target: tests.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:tests.cmo, file:tests.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o tests.cmo tests.ml # cached
-# Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
-# Target: typecheck.ml.depends, tags: { extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules typecheck.ml > typecheck.ml.depends # cached
-# Target: typecheck.cmx, tags: { compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o typecheck.cmx typecheck.ml # cached
-# Target: tests.cmx, tags: { compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o tests.cmx tests.ml # cached
-# Target: tests.native, tags: { dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }
-ocamlopt.opt definitions.cmx typecheck.cmx tests.cmx -o tests.native # cached
+# Target: tests.ml.depends, tags: { package(ounit2), extension:ml, file:tests.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules tests.ml > tests.ml.depends
+# Target: definitions.ml.depends, tags: { package(ounit2), extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules definitions.ml > definitions.ml.depends # cached
+# Target: definitions.cmo, tags: { package(ounit2), byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o definitions.cmo definitions.ml # cached
+# Target: typecheck.mli.depends, tags: { package(ounit2), extension:mli, file:typecheck.mli, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules typecheck.mli > typecheck.mli.depends # cached
+# Target: typecheck.cmi, tags: { package(ounit2), byte, compile, extension:mli, file:typecheck.mli, interf, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o typecheck.cmi typecheck.mli # cached
+# Target: tests.cmo, tags: { package(ounit2), byte, compile, extension:cmo, extension:ml, file:tests.cmo, file:tests.ml, implem, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o tests.cmo tests.ml
+# Target: definitions.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o definitions.cmx definitions.ml # cached
+# Target: typecheck.ml.depends, tags: { package(ounit2), extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules typecheck.ml > typecheck.ml.depends # cached
+# Target: typecheck.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o typecheck.cmx typecheck.ml # cached
+# Target: tests.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o tests.cmx tests.ml
+# Target: tests.native, tags: { package(ounit2), dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }
+ocamlfind ocamlopt -linkpkg -package ounit2 definitions.cmx typecheck.cmx tests.cmx -o tests.native
 # Compilation successful.

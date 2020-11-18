@@ -358,9 +358,9 @@ let pull_name = function
    subsitutions as well as the fresh variable name*)
 let rec gen_new_tvars' t known =
   let pull_sub_so_far = fun (n,sub) -> (sub,(n,sub)) in
-  let pull_name = fun (name,sub) ->
+  let pull_name a = fun (name,sub) ->
     match name with
-    | Sub n -> (name,(Sub (n+1),sub))
+    | Sub n -> (name,(Sub (n+1),(a,name)::sub))
     | _ -> failwith "fresh name source corrupted"
   in
   match t with
@@ -373,8 +373,8 @@ let rec gen_new_tvars' t known =
     | Some c ->
       (let^ sub_so_far = pull_sub_so_far in
       match assoc_opt a sub_so_far with
-      | None -> let^ fresh = pull_name in return' (TypeVar fresh,[(fresh,c)])
-      | Some a' -> return' (TypeVar a', [(a',c)])
+      | None -> let^ fresh = pull_name a in return' (TypeVar fresh,[(fresh,c)])
+      | Some a' -> return' (TypeVar a', [])
       )
     )
   | Fun (t1,t2) ->

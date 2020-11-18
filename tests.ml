@@ -1,106 +1,69 @@
+open OUnit2
 open Definitions
 open Typecheck
-(* test that Evallambda.eval gives back values*)
-
-(*let test_on e =
-Printf.printf "Evallambda.evaluation of %s:" (string_of_sugar e);
-print_newline ();
-print_string (string_of_expr (Evallambda.eval (desugar e)));
-print_newline ()
-*)
-(*
-(*
-let _ = test_on (Base (Int 5))
-
-let _ = test_on (Base (Lambda (Var (Name "x"), Name "x")))
-
-let _ = test_on (Base (Application (Lambda (Var (Name "x"), Name "x"), Lambda (Var (Name "x"), Name "x"))))
-
-let _ = test_on (Base (Application (Lambda (Application(Var (Name "x"), Var (Name "x")), Name "x"), Lambda (Var (Name "x"), Name "x"))))
-
-let _ = test_on (Base (If (Bool true, Int 1, Int 0)))
-*)
-(* fact is the factorial function, assuming that "f" is the name it is assigned to *)
-let fact =
-  let n = Name "n" in
-  Base (Lambda (If(Eq(Var n,Int 0),Int 1, Times(Var n,Application (Var (Name "f"), Plus (Var n,Int (-1))))), n))
-(* this is let rec f = <<fact>> in f 5*)
-let fact5 = 
-  LetRec(Name "f", fact, Base(Application (Var (Name "f"), Int 5)))
-
-let _ = test_on fact5
-(*
-(* this is the expression let x = 0 in let rec x = x + 1 in x which does not terminate because x = x + 1 has no fixed point *)
-let bad_rec = Let(Name "x", Base(Int 0), LetRec (Name "x", Base (Plus (Var (Name "x"), Int 1)), Base(Var (Name "x"))))
-
-let _ = print_endline (string_of_sugar bad_rec)
-
-(* This also does not terminate because although it has a fixed point, the recursion will never find it.*)
-let weird_rec =
-  let x = Name "x" in
-  Let(x,Base(Int 1),LetRec(x,Base(If(Eq(Var x,Int 0),Var x,Plus(Var x, Int (-1)))),Base (Var x)))
-
-(* This is the same expression as weird_rec but using let not let rec. It terminates. *)
-*)let weird_non_rec =
-  let x = Name "x" in
-  Let(x,Base(Int 1),Let(x, Base(Plus(Var x, Int 1)),Base (Var x)))
-
-let _ = test_on weird_non_rec
-*)
-
-(*
-let show_type texpr =
-  match typecheck texpr with
-  | Left msg -> print_endline msg
-  | Right t -> print_endline (string_of_type (fst t))
-
-let tfact =
-  let n = Name "n" in
-  let fact = Name "tfact" in
-  TBase (TLambda (TIf(TEq(TVar n,TInt 0),TInt 1, TTimes(TVar n,TApplication (TVar fact, TPlus (TVar n,TInt (-1))))), n, Integer))
-let tfact5 = TLetRec (Name "tfact", Fun(Integer,Integer), tfact, TBase(TApplication (TVar (Name "tfact"),TInt 3))) 
-
-let full_eval texpr =
-  Printf.printf "starting on\n%s" (string_of_typed_sugar texpr); print_newline ();
-    print_endline "type checking...";
-    match typecheck texpr with
-    | Left msg -> Printf.printf "type checking failed with error %s" msg
-    | Right (t,e) ->
-      Printf.printf "type of expression is %s" (string_of_type t);
-      print_newline ();
-      print_endline "evaluating expression...";
-      let result = Evallambda.eval (desugar e) in
-      print_endline (string_of_expr result)
-
-let _ = full_eval tfact5
-
-let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
-let _ = full_eval nested_let
-
-let test_print = TLet(Name "x", TBase (TInt 1), TBase (TPrint (TVar (Name "x"))))
-let _ = full_eval test_print
-*)
 
 let show_type tsugar = print_endline (string_of_class_constrained_expr_type (fst (typecheck tsugar)))
+let simple_type e = fst(fst(typecheck e))
+
+let int_id = TBase (TLambda (TVar (Name "x"),Name "x",Integer))
+let just_int = TBase (TInt 0)
+let just_bool = TBase (TBool true)
+let just_unit = TBase TUnit
+let int_sum = TBase (TPlus(TInt 2, TInt 3))
+let if_else = TBase(TIf(TBool true, TInt 0, TInt 1))
+
+let simple_tests = "test suite without lets or polymorphism" >::: [
+  "int_id" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type int_id));
+  "int_sum" >:: (fun _ -> assert_equal Integer (simple_type int_sum));
+  "just_int" >:: (fun _ -> assert_equal Integer (simple_type just_int));
+  "just_bool" >:: (fun _ -> assert_equal Boolean (simple_type just_bool));
+  "if_else" >:: (fun _ -> assert_equal Integer (simple_type if_else));
+]
 
 let id = TBase (TLambda (TVar (Name "x"),Name "x",TypeVar (Name "a")))
-
-let sum = TBase (TLambda (TLambda (TPlus (TVar (Name "x"), TVar (Name "y")), Name "x",TypeVar (Name "b")),Name "y",TypeVar (Name "a")))
-
-let f = TBase (TLambda (TPlus (TInt 2, TVar (Name "b")),Name "b", Boolean))
-
 let print = TBase (TLambda (TPrint(TVar (Name "x")),Name "x",TypeVar (Name "a")))
+let print_f_x = TBase (TLambda (TLambda(TPrint(TApplication(TVar (Name "f"), TVar (Name "x"))),Name "x",TypeVar (Name "b")),Name "f",TypeVar (Name "a")))
 
-let complicated = TBase (TLambda (TLambda(TPrint(TApplication(TVar (Name "f"), TVar (Name "x"))),Name "x",TypeVar (Name "b")),Name "f",TypeVar (Name "a")))
+(* tests that types are right, ignores type classes though *)
+let poly_tests = "test suite with polymorphism" >::: [
+  "int_id" >:: (fun _ -> assert_equal true (match simple_type id with Fun(TypeVar a, TypeVar b) -> a = b | _ -> false));
+  "print" >:: (fun _ -> assert_equal true (match simple_type print with Fun(TypeVar a,UnitType) -> true | _ -> false));
+  "print_f_x" >:: (fun _ -> assert_equal true (match simple_type print_f_x with Fun(Fun(TypeVar a, TypeVar b),Fun(TypeVar c, UnitType)) -> a = c | _ -> false));
+]
 
-let firstlet = TLet (Name "x", TBase(TInt 5), TBase(TVar (Name "x")))
-let id = TBase (TLambda(TVar (Name "x"), Name "x", TypeVar (Name "a")))
-let sndlet = TLetRec (Name "x", TypeVar(Name "b") , id, TBase(TVar (Name "x")))
+
+let fstlet = TLet (Name "x", TBase(TInt 5), TBase(TVar (Name "x")))
 let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
+(* this expression is interesting because this requires inference to instantiate type variables distinctly for each isntance *)
 let interesting = TLet(Name "x", id, TBase(TApplication(TVar(Name "x"), TVar(Name "x"))))
+
+let let_tests = "test suite with let expressions" >::: [
+  "fstlet" >:: (fun _ -> assert_equal Integer (simple_type fstlet));
+  "nested_let" >:: (fun _ -> assert_equal Boolean (simple_type nested_let));
+  "id_itself" >:: (fun _ -> assert_equal true (match simple_type interesting with
+                  | (Fun(TypeVar a, TypeVar b)) -> a = b
+		  | _ -> false));
+   
+]
+
+let fact = 
+  let fact' =
+    let n = Name "n" in
+    TBase (TLambda (TIf(TEq(TVar n,TInt 0),TInt 1, TTimes(TVar n,TApplication (TVar (Name "f"), TPlus (TVar n,TInt (-1))))), n, TypeVar (Name "a")))
+  in
+  TLetRec(Name "f", TypeVar (Name "b") , fact', TBase(TVar (Name "f")))
+
+let let_rec_tests = "test suite with let rec expressions" >::: [
+  "fact" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type fact));
+]
+
 let test_infer_prod = TBase (TLambda (TPrint(TProj (TVar (Name "x"),0,2)), Name "x", TypeVar (Name "a")))
+let infer_tests = "test suite for type inference" >::: [
+  "product_fun" >:: (fun _ -> assert_equal true (match simple_type test_infer_prod with
+      | Fun(Product [TypeVar a; TypeVar b], UnitType) -> a <> b
+      | _ -> false));
+]
 
-let _ = print_endline "entering new section"
-let _ = show_type test_infer_prod
-
+let type_test_suite = "all tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests]
+let _ = run_test_tt_main type_test_suite
 

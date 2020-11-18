@@ -290,7 +290,7 @@ let rec string_of_typed_sugar : typed_sugar -> string = function
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
 | TBase e -> string_of_typed_expr e
 
-(*TODO: change the case with typevariables to do something better than this. Ideally should use the constrained_type type to infer if printable *)
+(* Note: for type variables you should check the known type class constraints to see if it is declared prinatble before calling this. *)
 let rec printable : expr_type -> bool = function
 | UnitType -> true
 | Integer -> true
