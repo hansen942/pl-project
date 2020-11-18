@@ -14,11 +14,11 @@ ocamlc.opt -c -o tests.cmo tests.ml # cached
 # Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
 # Target: typecheck.ml.depends, tags: { extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules typecheck.ml > typecheck.ml.depends
+ocamldep.opt -modules typecheck.ml > typecheck.ml.depends # cached
 # Target: typecheck.cmx, tags: { compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o typecheck.cmx typecheck.ml
+ocamlopt.opt -c -o typecheck.cmx typecheck.ml # cached
 # Target: tests.cmx, tags: { compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o tests.cmx tests.ml # cached
 # Target: tests.native, tags: { dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }
-ocamlopt.opt definitions.cmx typecheck.cmx tests.cmx -o tests.native
+ocamlopt.opt definitions.cmx typecheck.cmx tests.cmx -o tests.native # cached
 # Compilation successful.

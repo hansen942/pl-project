@@ -98,8 +98,9 @@ let id = TBase (TLambda(TVar (Name "x"), Name "x", TypeVar (Name "a")))
 let sndlet = TLetRec (Name "x", TypeVar(Name "b") , id, TBase(TVar (Name "x")))
 let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
 let interesting = TLet(Name "x", id, TBase(TApplication(TVar(Name "x"), TVar(Name "x"))))
+let test_infer_prod = TBase (TLambda (TPrint(TProj (TVar (Name "x"),0,2)), Name "x", TypeVar (Name "a")))
 
 let _ = print_endline "entering new section"
-let _ = show_type interesting 
+let _ = show_type test_infer_prod
 
 

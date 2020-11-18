@@ -22,6 +22,10 @@ and expr =
 | Eq of expr * expr
 | Unit
 | Print of expr
+| Sum of user_var_name * expr (* var_name is the constructor name used *)
+| Prod of expr list
+| Match of expr * ((user_var_name * expr) list)
+| Proj of expr * int
 (*| Lazy of expr ref*)
 
 (*module Compare_VName : Map.OrderedType = struct
@@ -52,11 +56,13 @@ let rec desugar = function
 | Base b -> b
 
 
-let is_val = function
+let rec is_val = function
 | Int _ -> true
 | Bool _ -> true
 | Lambda _ -> true
 | Unit -> true
+| Prod elist -> for_all is_val elist
+| Sum (name,e) -> is_val e
 | _ -> false
 
 let rec naive_list_union' acc l1 = function
@@ -68,7 +74,8 @@ let rec naive_list_union' acc l1 = function
 let naive_list_union : 'a list -> 'a list -> 'a list = naive_list_union' []
 
 (** [fv e] gives a list containing all the free variables of [e].
-    Ideally, we would replace the list with a set but this requires defining an order on expressions so I'm just building it with lists first.*)
+    Ideally, we would replace the list with a set but this requires defining an order on expressions so I'm just building it with lists first.
+   if a projection will fail then it doesn't have any free variables*)
 let rec fv : expr -> var_name list = function
 | Int _ -> []
 | Var v -> [v]
@@ -81,6 +88,16 @@ let rec fv : expr -> var_name list = function
 | Eq (e1,e2) -> naive_list_union (fv e1) (fv e2)
 | Unit -> []
 | Print e -> fv e
+| Sum (name,e) -> fv e
+| Prod elist -> fold_left (fun acc x -> naive_list_union acc (fv x)) [] elist
+| Match (e,functions) ->
+  naive_list_union (fv e) (fold_left (fun acc x -> naive_list_union acc (fv (snd x))) [] functions)
+| Proj (expr,n) ->(
+  match expr with
+  | Prod elist -> (match nth_opt elist n with None -> [] | Some e -> fv e )
+  | _ -> []
+  )
+
 
 let string_of_var v : string =
 match v with
@@ -99,7 +116,18 @@ let rec string_of_expr : expr -> string = function
 | If (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
 | Unit -> "()"
 | Print e -> Printf.sprintf "print %s" (string_of_expr e)
-
+| Sum (name,e) -> Printf.sprintf "%s %s" name (string_of_expr e)
+| Prod elist ->(
+  match elist with
+  | [] -> "()"
+  | h::t -> let body = (string_of_expr h) ^ (fold_left (fun acc x -> acc ^ ", " ^ (string_of_expr x)) "" t) in
+  Printf.sprintf "(%s)" body
+  )
+| Match (e,cases) ->
+  let body = fold_left (fun acc x -> acc ^ "| " ^ (fst x) ^ " -> " ^ (string_of_expr (snd x))) "" cases in
+  Printf.sprintf "match %s with %s" (string_of_expr e) body
+| Proj (e,n) -> Printf.sprintf "%s[%s]" (string_of_expr e) (string_of_int n)
+ 
 let rec string_of_sugar : sugar -> string = function
 | Let (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
 | LetRec (v,e1,e2) -> Printf.sprintf "let rec %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
@@ -122,6 +150,8 @@ type expr_type =
 | Fun of expr_type * expr_type
 | UnitType
 | TypeVar of var_name
+| Product of expr_type list
+| SumType of user_var_name * ((user_var_name * expr_type) list)
 (*TODO: these extensions*)
 (*
 and user_type =
@@ -140,12 +170,16 @@ let rec ftv = function
 | Boolean -> []
 | UnitType -> []
 | TypeVar v -> [v]
+| Product tlist -> fold_left (fun acc x -> naive_list_union acc (ftv x)) [] tlist
+| SumType (name,constructors) -> fold_left (fun acc x -> naive_list_union acc (ftv (snd x))) [] constructors
 
 let rec tsub t_new tvar = fun t ->
   match t with
   | TypeVar v -> if v = tvar then t_new else t
   | Fun (t1,t2) ->
     Fun (tsub t_new tvar t1, tsub t_new tvar t2)
+  | Product tlist -> Product (map (tsub t_new tvar) tlist)
+  | SumType (name,constructors) -> SumType (name,(map (fun (c,ct)-> (c,tsub t_new tvar ct)) constructors))
   | _ -> t
 
 let rec string_of_type = function
@@ -159,7 +193,21 @@ let rec string_of_type = function
   in
   Printf.sprintf "%s →  %s" s1 (string_of_type t2)
 | UnitType -> "unit"
-| TypeVar v -> Printf.sprintf "Tvar %s" (string_of_var v)
+| SumType (name,constructors) ->
+  let cons_strings = map (fun (c,ct) -> c ^ " " ^ (string_of_type ct)) constructors in
+  name ^ " = " ^
+  (match cons_strings with
+  | [] -> "void"
+  | h::t -> "sum " ^ h ^ (fold_left (fun acc x -> "| " ^ x)) "" t
+  )
+| Product tlist ->
+  let entries = map string_of_type tlist in
+  (match entries with
+  | [] -> "EmptyProduct"
+  | h::[] -> Printf.sprintf "unary product %s" h
+  | h::t -> h ^ (fold_left (fun acc x -> acc ^ " * " ^ x) "" t)
+  )
+| TypeVar v -> Printf.sprintf "%s" (string_of_var v)
 
 (** [known_classes] is an association list, if [(a,[c1,c2,c3])] is in the list this means that we know [a] is in the type classes [c1,c2,c3]. *)
 type known_classes = (var_name * class_constraints) list
@@ -178,14 +226,6 @@ let string_of_class_constrained_expr_type = function
   | (t,kc) -> let kc_needed = filter (fun x -> mem (fst x) (ftv t)) kc in
     let quantifiers = fold_left (fun acc x -> acc ^ " " ^ (string_of_tvar_constraint (fst x) (snd x))) "" kc_needed in
     Printf.sprintf "%s%s" quantifiers (string_of_type t)
-    
-    
-
-(* Use Simple if there are no type variables, use quantified if there are.
-   Using this setup ensures it is not possible to write anything but prenex quantifiers.*)
-type tscheme = Simple of expr_type | Quantified of known_classes * expr_type
-
-
 
 (** Elements of [typed_expr] represent expressions which are annotated with types.*)
 type typed_expr =
@@ -195,12 +235,16 @@ type typed_expr =
 | TPlus of typed_expr * typed_expr
 | TTimes of typed_expr * typed_expr
 | TLambda of typed_expr * var_name * expr_type
-(*| QTLambda of typed_expr * var_name * expr_type * class_constraints*)
 | TApplication of typed_expr * typed_expr
 | TIf of typed_expr * typed_expr * typed_expr
 | TEq of typed_expr * typed_expr
 | TUnit
 | TPrint of typed_expr
+| TSum of user_var_name * typed_expr (* var_name is the constructor name used *)
+| TProd of typed_expr list
+| TMatch of typed_expr * ((user_var_name * typed_expr) list)
+| TProj of typed_expr * int * int (* index you want, length of tuple you expect *)
+(* for type inference purposes it is important we know the length of the tuple in advance. We would not have this problem if we instead only allowed pairs and wrote n-tuples as nested pairs, but that's just silly. In effect you can think of this as being a dependently typed function whose second argument determines the type, but because these are constants it doesn't require any extra work. Note that the args are printed in the other order*)
 
 let rec string_of_typed_expr : typed_expr -> string = function
 | TInt n -> string_of_int n
@@ -214,25 +258,46 @@ let rec string_of_typed_expr : typed_expr -> string = function
 | TIf (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_typed_expr e1) (string_of_typed_expr e2) (string_of_typed_expr e3)
 | TUnit -> "()"
 | TPrint e -> (Printf.sprintf "print %s" (string_of_typed_expr e))
+| TSum (name,expr) -> Printf.sprintf "%s %s" name (string_of_typed_expr expr)
+| TProd elist ->(
+  match elist with
+  | [] -> "()"
+  | h::t -> let body = (string_of_typed_expr h) ^ (fold_left (fun acc x -> acc ^ ", " ^ (string_of_typed_expr x)) "" t) in
+  Printf.sprintf "(%s)" body
+  )
+| TMatch (e,cases) ->
+  let body = fold_left (fun acc x -> acc ^ "| " ^ (fst x) ^ " -> " ^ (string_of_typed_expr (snd x))) "" cases in
+  Printf.sprintf "match %s with %s" (string_of_typed_expr e) body
+| TProj (e,n,l) -> Printf.sprintf "proj %s %s %s" (string_of_int l) (string_of_int n) (string_of_typed_expr e) 
 
+(* allow user to define new types so they can actually use sums *)
 (** [typed_sugar] is a sugary version of [typed_expr].
     The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
 type typed_sugar =
+| NewSum of user_var_name * (user_var_name * expr_type) list
 | TLet of var_name * typed_sugar * typed_sugar
 | TLetRec of var_name * expr_type * typed_sugar * typed_sugar
 | TBase of typed_expr
 
 let rec string_of_typed_sugar : typed_sugar -> string = function
+| NewSum (name,cons) ->(
+  match cons with
+  | [] -> Printf.sprintf "%s = void" name
+  | h::t -> let body = match h with (ch,th) -> ch ^ " " ^ (string_of_type th) ^ (fold_right (fun (c,t) acc -> (Printf.sprintf " | %s %s" c (string_of_type t)) ^ acc) t "") in
+  Printf.sprintf "newtype %s = %s" name body
+  )
 | TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
 | TBase e -> string_of_typed_expr e
 
 (*TODO: change the case with typevariables to do something better than this. Ideally should use the constrained_type type to infer if printable *)
-let printable : expr_type -> bool = function
+let rec printable : expr_type -> bool = function
 | UnitType -> true
 | Integer -> true
 | Boolean -> true
 | Fun _ -> false
+| SumType (name,cons) -> for_all printable (map snd cons)
+| Product tlist -> for_all printable tlist
 | TypeVar _ -> false
 (** [def] is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet. *)
 type 'a def =

@@ -39,6 +39,10 @@ let rec strip_base : typed_expr -> expr = function
 | TEq (e1,e2) -> Eq (strip_base e1, strip_base e2) 
 | TUnit -> Unit
 | TPrint e -> Print (strip_base e)
+| TSum (name,e) -> Sum(name,strip_base e)
+| TProd elist -> Prod(map strip_base elist)
+| TMatch (e,cases) -> Match (strip_base e, map (fun (c,e) -> (c,strip_base e)) cases)
+| TProj (e,n,l) -> Proj (strip_base e, n)
 
 let rec strip : typed_sugar -> sugar = function
 | TLet (v,e1,e2) -> Let (v, strip e1, strip e2)
@@ -49,12 +53,14 @@ let rec strip : typed_sugar -> sugar = function
    Ideally this would be a map but setting this up is giving me issues so I'm starting by using an association list.
    Invariant is that keys should not appear more than once (otherwise [remove_assoc] will not remove all bindings.*)
 type venv = (var_name * expr_type) list
-
+type user_type_env = (user_var_name * expr_type) list
 
 let undeclared_error v =  Printf.sprintf "The variable %s is undeclared" (string_of_var v)
 let inferred_mismatch e t reason found = Printf.sprintf "Expression %s was expected to have type %s because %s but its actual type is %s" (string_of_typed_expr e) (string_of_type t) reason (string_of_type found)
 let declared_mismatch_error v declared got = Printf.sprintf "%s had declared type %s but was equated to an expression of type %s" (string_of_var v) (string_of_type declared) (string_of_type got)
 
+(*Note: this has not been updated to deal with sums and products *)
+(*
 let rec tcheck_simple venv : typed_expr -> (error_msg,expr_type) either = function
 | TInt _ -> return Integer 
 | TBool _ -> return Boolean 
@@ -102,6 +108,7 @@ let rec tcheck_simple venv : typed_expr -> (error_msg,expr_type) either = functi
 | TPrint e ->
   let* t = tcheck_simple venv e in
   if printable t then return UnitType else Left (Printf.sprintf "Expected %s to be a printable expression, as it appears in a print statement, but it has type %s" (string_of_typed_expr e) (string_of_type t))
+*)
 
 
 type tconstraint =
@@ -164,6 +171,33 @@ let rec tcheck_simple' venv : typed_expr -> (expr_type,constraints * var_name) s
 | TPrint e ->
   let^ t = tcheck_simple' venv e in
   class_constrain t (Printable) () >>=^ ignore(return' UnitType)
+| TSum (cons,texpr) ->
+  (*TODO: to get this case, we need to add an environment of defined sum types so that we verify the constructor exists and find the associated sum type *)
+  failwith "unimplemented"
+| TProd elist ->
+  let^ tlist = fold_right (fun x acc -> let^ t_new = tcheck_simple' venv x in let^ acc' = acc in return' (t_new::acc')) elist (return' []) in
+  return' (Product tlist)
+| TMatch (e,cases) ->
+  (* not much point implementing this when we don't have sums yet.
+     of course we will check that e is a sumtype and the cases are
+     constructors of that type, and that the return type of all the functions
+     are equal*)
+  failwith "unimplemented"
+| TProj (e,n,l) ->
+  (* note we zero index *)
+  if n >= l || n < 0 then failwith "index out of bounds" else
+  if l < 0 then failwith "projections not defined for tuples of negative length" else
+  (* generate a generic type for product of length l and constrain e to have this type *)
+  let rec make_gen_prod' so_far_done tlist_so_far l =
+    if so_far_done = l then return' tlist_so_far else
+    let^ t_new = draw_name in make_gen_prod' (so_far_done + 1) ((TypeVar t_new)::tlist_so_far) l
+    in
+  let make_gen_prod l = let^ tlist = make_gen_prod' 0 [] l in return' ((Product tlist),nth tlist n) in
+  let^ gen_prod,t_out = make_gen_prod l in
+  let^ te = tcheck_simple' venv e in
+  constrain te gen_prod () >>=^ ignore(return' t_out)
+
+
 
 let tcheck_simple'' venv typed_expr : expr_type * constraints =
   let out = tcheck_simple' venv typed_expr ([],init_name) in
@@ -229,6 +263,13 @@ let rec unify' classes = function
   | (Fun (t11,t12), Fun (t21,t22)) ->
     (* they are both functions *)
     unify' classes (Equality(t11,t21)::Equality(t12,t22)::cons_tail)
+  (* Similarly, we check if they are both tuples *)
+  | (Product tlist1, Product tlist2) -> 
+    if length tlist1 <> length tlist2 then
+    failwith (Printf.sprintf "Cannot solve type constraint %s = %s as these are products of unequal length" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)))
+    else 
+    let new_cons = fold_left (fun acc (x,y) -> Equality(x,y)::acc) cons_tail (combine tlist1 tlist2) in
+    unify' classes new_cons
   (* None of the special cases applied, so cannot be solved. *)
   | _ -> failwith (Printf.sprintf "Cannot solve type constraint %s = %s" (string_of_type t1) (string_of_type t2))
 
@@ -253,7 +294,7 @@ let rec sub_vars sub_map t =
 (* [qauntify t classes] gives back a type scheme that includes all the class constraints for free variables in [t] given in [classes]*)
 let quantify t classes = failwith "unimplemented"
 
-(*TODO: how do we generalize this to more easily deal with  *)
+(*TODO: how do we generalize this to more easily deal with arbitrary type classes *)
 let weakest_class_constraint = function
   |(TypeVar v,Printable) -> [(v,[Printable])]
   |(t,Printable) -> if printable t then [] else failwith (Printf.sprintf "Cannot solve class constraint %s %s" (string_of_typeclass Printable) (string_of_type t))
@@ -340,6 +381,13 @@ let rec gen_new_tvars' t known =
       let^ t1',k1' = gen_new_tvars' t1 known in
       let^ t2',k2' = gen_new_tvars' t2 known in
       return' (Fun(t1',t2'), combine_class_constraints (k1' @ k2'))
+  | Product tlist ->
+      let^ new_tlist,new_known = fold_right
+      (fun t acc -> let^ t',k' = gen_new_tvars' t known in
+      let^ acc' = acc in
+      return'((t'::(fst acc')),combine_class_constraints(k'@(snd acc')))) tlist (return' ([],[])) in
+      return' ((Product new_tlist),new_known)
+  | SumType _ -> failwith "unimplemented" 
 (** [gen_new_tvars t known] gives back [t',venv',known'],
     [t'] is an equivalent type with fresh type
     variables and [known'] is a class constraint object that defines the constraints
@@ -395,6 +443,29 @@ let rec instance_sub_simple v t known_classes e2 =
   | TPrint e ->
     let^ e',venv1,known1 = quick_sub e in
     return' (TPrint e', venv1, known1)
+  | TProd elist ->
+      let^ elist',venv',known' = fold_right
+      (fun e acc ->
+      let^ e',venv',known' = quick_sub e in
+      let^ e_acc,venv_acc,k_acc = acc in
+      return'(e'::e_acc, combine_maps venv_acc venv', combine_maps k_acc known')) elist (return' ([],[],[])) in
+      return' (TProd(elist'),venv',known')
+  | TSum (c,e) ->
+      let^ e',v',k' = quick_sub e in
+      return' (TSum (c,e'),v',k')
+  | TProj (e,n,l) ->
+      let^ e',v',k' = quick_sub e in
+      return' (TProj (e',n,l),v',k')
+  | TMatch (e,cases) ->
+      let^ e',v',k' = quick_sub e in
+      let^ cases',venv',known' = fold_right
+      (fun (c,e) acc ->
+      let^ e',venv',known' = quick_sub e in
+      let^ e_acc,venv_acc,k_acc = acc in
+      return'((c,e')::e_acc, combine_maps venv_acc venv', combine_maps k_acc known')) cases (return' ([],[],[])) in
+      return' (TMatch(e',cases'),combine_maps v' venv', combine_maps k' known')
+
+
 
 (* same as instance_sub but works on sugar*)
 let rec instance_sub v t known_classes e2  = 
@@ -421,18 +492,19 @@ let rec instance_sub v t known_classes e2  =
     [venv] gives the current variable -> type mapping
     [texpr] is the typed expression to be type checked
     [known_classes] are the known type class constraints on type variables
+    TODO: add the argument [utenv], the environment of user defined types, and set up typechecking for newsum
     the state monad is used to keep track of the next fresh type variable name available
     The output of the function is a pair [expr_type * var_name] giving the next fresh
     type variable name that is available and the type of the expression that you put in*)
 let rec tcheck' (venv : (var_name * expr_type) list) (known_classes : (var_name * (type_class list)) list) : typed_sugar -> (class_constrained_expr_type,var_name) state = function
 | TBase expr ->
     (fun name -> 
-    (*first call tcheck_simple_compact in order to get the type *)
+    (*just call tcheck_simple_compact in order to get the type *)
     match tcheck_simple_compact venv expr name known_classes with
     | (t,fresh_out,class_out) -> ((t,class_out),fresh_out)
     )
   | TLet (v,e1,e2) -> (
-  (* type check e1 and get the constraints and the type *)
+  (* get the class constraints and the type using tcheck' *)
     let^ t1,class_out1 = tcheck' venv known_classes e1 in
     (* do instance-based type substitution into e2 *)
     (* for using instance_sub we only care about the class constraints for free type variables
@@ -443,8 +515,8 @@ let rec tcheck' (venv : (var_name * expr_type) list) (known_classes : (var_name 
     (* note that the type variables in the domains of these local maps are new, so don't
        appear in the original map, meaning we can blindly concatenate them without checking
        for repeats*)
-    let new_venv : (var_name * expr_type) list = venv @ v_local_venv in
-    let new_known : (var_name * (type_class list)) list = known_classes @ v_local_known in
+    let new_venv = venv @ v_local_venv in
+    let new_known = known_classes @ v_local_known in
     (* finally we can type check e2', the modified version of e2*)
     tcheck' new_venv new_known e2'
     )
@@ -468,7 +540,8 @@ let rec tcheck' (venv : (var_name * expr_type) list) (known_classes : (var_name 
     )
 
 (* [tcheck t_expr] is replaced by tcheck' above.
-   This function did type checking in the simply typed lambda calculus (no type variables)*)
+   This function did type checking in the simply typed lambda calculus (no type variables or polymorphism)*)
+   (*
 let rec tcheck venv : typed_sugar -> (error_msg,expr_type) either = function
 | TBase expr -> tcheck_simple venv expr
 | TLet (v,e1,e2) ->
@@ -480,6 +553,7 @@ let rec tcheck venv : typed_sugar -> (error_msg,expr_type) either = function
     if t1 <> tv then Left (declared_mismatch_error v tv t1)
     else
     tcheck venv' e2 
+*)
 
 let typecheck sugar_e =
   let mtype = fst (tcheck' [] [] sugar_e init_name) in (mtype, strip sugar_e)
