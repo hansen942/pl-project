@@ -6,3 +6,4 @@ I began by implementing an evaluator for the applied lambda calculus with intege
 Then I made it simply typed and added recursive functions.
 Recently, I implemented prenex polymorphism and type inference as well as type classes, and have begun work to add product and sum types and recursive types.
 Hopefully I will get around to adding a Lexer and Parser at some point.
+Currently you must manually construct the AST of the program you wish to run and then use the eval_prog function in main.ml to both type check and evaluate it.
