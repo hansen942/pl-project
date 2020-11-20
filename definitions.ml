@@ -41,7 +41,21 @@ type sugar =
 | LetRec of var_name * sugar * sugar 
 | Let of var_name * sugar * sugar 
 | Z
-| Base of expr
+| SInt of int
+| SVar of var_name
+| SLambda of sugar * var_name
+| SApplication of sugar * sugar
+| SIf of sugar * sugar * sugar
+| SBool of bool
+| SPlus of sugar * sugar
+| STimes of sugar * sugar
+| SEq of sugar * sugar
+| SUnit
+| SPrint of sugar
+| SSum of user_var_name * sugar (* var_name is the constructor name used *)
+| SProd of sugar list
+| SMatch of sugar * ((user_var_name * sugar) list)
+| SProj of sugar * int
 
 (** [z] is the Z-combinator *)
 let z =
@@ -49,11 +63,25 @@ let z =
   let lazy_omega' = Lambda (Application(Var (Name "f"), innermost), Name "x") in
   Lambda (Application (lazy_omega', lazy_omega'), Name "f") 
 
-let rec desugar = function
+let rec desugar : sugar -> expr = function
 | LetRec (v,e1,e2) -> Application (Lambda (desugar e2,v), Application(desugar Z, Lambda (desugar e1,v)))
 | Let (v,e1,e2) -> Application (Lambda (desugar e2,v), desugar e1)
 | Z -> z
-| Base b -> b
+| SInt n -> Int n
+| SVar v -> Var v
+| SLambda(e,x) -> Lambda(desugar e,x)
+| SApplication(e1,e2) -> Application(desugar e1,desugar e2)
+| SIf(e1,e2,e3) -> If(desugar e1,desugar e2,desugar e3)
+| SBool b -> Bool b
+| SPlus(e1,e2) -> Plus(desugar e1,desugar e2)
+| STimes(e1,e2) -> Times(desugar e1,desugar e2)
+| SEq(e1,e2) -> Eq(desugar e1,desugar e2)
+| SUnit -> Unit
+| SPrint e -> Print (desugar e)
+| SSum(n,e) -> Sum(n,desugar e) 
+| SProd elist -> Prod(map desugar elist)
+| SMatch (e,cases) -> Match(desugar e, map (fun (x,y) -> (x,desugar y)) cases)
+| SProj(e,n) -> Proj(desugar e,n)
 
 
 let rec is_val = function
@@ -132,7 +160,28 @@ let rec string_of_sugar : sugar -> string = function
 | Let (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
 | LetRec (v,e1,e2) -> Printf.sprintf "let rec %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
 | Z -> "Z"
-| Base e -> string_of_expr e
+| SInt n -> string_of_int n
+| SVar v -> string_of_var v
+| SBool b -> string_of_bool b
+| SEq (e1,e2) -> Printf.sprintf "%s = %s" (string_of_sugar e1) (string_of_sugar e2)
+| SPlus (e1,e2) -> Printf.sprintf "%s + %s" (string_of_sugar e1) (string_of_sugar e2)
+| STimes (e1,e2) -> Printf.sprintf "%s * (%s)" (string_of_sugar e1) (string_of_sugar e2)
+| SLambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_sugar e) 
+| SApplication (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_sugar e1) (string_of_sugar e2)
+| SIf (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_sugar e1) (string_of_sugar e2) (string_of_sugar e3)
+| SUnit -> "()"
+| SPrint e -> Printf.sprintf "print %s" (string_of_sugar e)
+| SSum (name,e) -> Printf.sprintf "%s %s" name (string_of_sugar e)
+| SProd elist ->(
+  match elist with
+  | [] -> "()"
+  | h::t -> let body = (string_of_sugar h) ^ (fold_left (fun acc x -> acc ^ ", " ^ (string_of_sugar x)) "" t) in
+  Printf.sprintf "(%s)" body
+  )
+| SMatch (e,cases) ->
+  let body = fold_left (fun acc x -> acc ^ "| " ^ (fst x) ^ " -> " ^ (string_of_sugar (snd x))) "" cases in
+  Printf.sprintf "match %s with %s" (string_of_sugar e) body
+| SProj (e,n) -> Printf.sprintf "%s[%s]" (string_of_sugar e) (string_of_int n)
 
 (** [type_class] serves the purpose of telling what generic types can have generic operations done on them *)
 type type_class =
@@ -245,6 +294,10 @@ type typed_expr =
 | TMatch of typed_expr * ((user_var_name * typed_expr) list)
 | TProj of typed_expr * int * int (* index you want, length of tuple you expect *)
 (* for type inference purposes it is important we know the length of the tuple in advance. We would not have this problem if we instead only allowed pairs and wrote n-tuples as nested pairs, but that's just silly. In effect you can think of this as being a dependently typed function whose second argument determines the type, but because these are constants it doesn't require any extra work. Note that the args are printed in the other order*)
+(* allow user to define new types so they can actually use sums *)
+| NewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * typed_expr (* new type name, type variables used, constructors by types, next expression *)
+| TLet of var_name * typed_expr * typed_expr
+| TLetRec of var_name * expr_type * typed_expr * typed_expr
 
 let rec string_of_typed_expr : typed_expr -> string = function
 | TInt n -> string_of_int n
@@ -269,32 +322,16 @@ let rec string_of_typed_expr : typed_expr -> string = function
   let body = fold_left (fun acc x -> acc ^ "| " ^ (fst x) ^ " -> " ^ (string_of_typed_expr (snd x))) "" cases in
   Printf.sprintf "match %s with %s" (string_of_typed_expr e) body
 | TProj (e,n,l) -> Printf.sprintf "proj %s %s %s" (string_of_int l) (string_of_int n) (string_of_typed_expr e) 
-
-(* allow user to define new types so they can actually use sums *)
-(** [typed_sugar] is a sugary version of [typed_expr].
-    The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
-type typed_sugar =
-| NewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * typed_sugar (* new type name, type variables used, constructors by types, next expression *)
-| TLet of var_name * typed_sugar * typed_sugar
-| TLetRec of var_name * expr_type * typed_sugar * typed_sugar
-| TBase of typed_expr
-
-let quick_strip_tsugar = function
-| TBase e -> e
-| _ -> failwith "cannot strip let expressions"
-
-let rec string_of_typed_sugar : typed_sugar -> string = function
 | NewSum (name,vars,cons,s) ->(
   let bind_vars = fold_right (fun x acc -> x ^ " " ^ acc) vars "" in
   match cons with
   | [] -> Printf.sprintf "%s = void" name
   | h::t -> let body = match h with (ch,th) -> ch ^ " " ^ (string_of_type th) ^ (fold_right (fun (c,t) acc -> (Printf.sprintf " | %s %s" c (string_of_type t)) ^ acc) t "") in
   let dec = Printf.sprintf "newtype %s %s = %s" name bind_vars body in
-  Printf.sprintf "%s in %s" dec (string_of_typed_sugar s)
+  Printf.sprintf "%s in %s" dec (string_of_typed_expr s)
   )
-| TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
-| TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
-| TBase e -> string_of_typed_expr e
+| TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_expr e1) (string_of_typed_expr e2)
 
 (* Note: for type variables you should check the known type class constraints to see if it is declared prinatble before calling this. *)
 let rec printable : expr_type -> bool = function
@@ -323,12 +360,9 @@ type opt_t_expr =
 | OProd of opt_t_expr list
 | OMatch of opt_t_expr * ((user_var_name * opt_t_expr) list)
 | OProj of opt_t_expr * int * int
-
-type opt_t_sugar =
-| ONewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * opt_t_sugar (* new type name, type variables used, constructors by types *)
-| OLet of var_name * opt_t_sugar * opt_t_sugar 
-| OLetRec of var_name * (expr_type option) * opt_t_sugar * opt_t_sugar 
-| OBase of opt_t_expr 
+| ONewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * opt_t_expr
+| OLet of var_name * opt_t_expr * opt_t_expr 
+| OLetRec of var_name * (expr_type option) * opt_t_expr * opt_t_expr 
 
 type ('a,'s) state = 's -> ('a * 's)
 let return x = fun s -> (x,s)
@@ -345,8 +379,8 @@ let pull_name = function
 | Sub n -> (Sub n, Sub (n+1))
 | _ -> failwith "internal error" 
 
-let rec annotate_opt_t_expr' oexpr =
-  let f = annotate_opt_t_expr' in
+let rec annotate_opt_t_expr oexpr =
+  let f = annotate_opt_t_expr in
   match oexpr with
   | OInt n -> return(TInt n)
   | OBool b -> return(TBool b)
@@ -396,14 +430,9 @@ let rec annotate_opt_t_expr' oexpr =
   | OProj(e,i,l) ->
     let* e' = f e in
     return(TProj(e',i,l))
-
-let rec annotate_opt_t_sugar sug =
-  let g = annotate_opt_t_sugar in
-  let f = annotate_opt_t_expr' in
-  match sug with
   | OLet(v,e1,e2) ->
-    let* e1' = g e1 in
-    let* e2' = g e2 in
+    let* e1' = f e1 in
+    let* e2' = f e2 in
     return(TLet(v,e1',e2'))
   | OLetRec(v,t_opt,e1,e2) ->
     let* t =
@@ -411,8 +440,8 @@ let rec annotate_opt_t_sugar sug =
     | None -> let* name = pull_name in return(TypeVar(name))
     | Some t -> return t
     in
-    let* e1' = g e1 in
-    let* e2' = g e2 in
+    let* e1' = f e1 in
+    let* e2' = f e2 in
     return(TLetRec(v,t,e1',e2'))
-  | OBase(e) -> let* e' = f e in return(TBase e')
-  | ONewSum (w,x,y,z) -> let* z' = g z in return(NewSum (w,x,y,z')) 
+  | ONewSum (w,x,y,z) -> let* z' = f z in return(NewSum (w,x,y,z')) 
+  | OUnit -> return TUnit

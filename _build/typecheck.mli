@@ -15,7 +15,7 @@ type info = int * int
 type error_msg = string
 
 (** [typecheck t_expr] either gives back [Right (t,e)] where [t] is the type of [t_expr] and [e] the expression with type annotations removed, or it gives back an [error_msg]*)
-val typecheck : typed_sugar -> var_name -> class_constrained_expr_type * sugar
+val typecheck : typed_expr -> var_name -> class_constrained_expr_type * sugar * var_name
 
 type tconstraint =
 | Equality of expr_type * expr_type
@@ -23,7 +23,3 @@ type tconstraint =
 type constraints = tconstraint list
 
 val string_of_constraints : constraints -> string
-
-val tcheck_simple_test : typed_expr -> class_constrained_expr_type
-val print_sub_map : (var_name * expr_type) list -> unit
-

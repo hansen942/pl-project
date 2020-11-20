@@ -3,3 +3,5 @@ test:
 play:
 	ocamlbuild playground.native && ./playground.native
 
+build:
+	ocamlbuild main.native

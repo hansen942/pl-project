@@ -81,26 +81,11 @@ let test_print = TLet(Name "x", TBase (TInt 1), TBase (TPrint (TVar (Name "x")))
 let _ = full_eval test_print
 *)
 
-let show_type tsugar = print_endline (string_of_class_constrained_expr_type (fst (typecheck tsugar)))
+let tsug_from_string s =
+  let lexbuf = Lexing.from_string s in
+  let opt_t_e = Parser.prog Lexer.token lexbuf in
+  annotate_opt_t_expr opt_t_e init_name 
 
-let id = TBase (TLambda (TVar (Name "x"),Name "x",TypeVar (Name "a")))
+let fact,fact_start = tsug_from_string "let rec fact = lambda x . if x = 0 then 1 else x * (fact (x + (-1))) in fact"
 
-let sum = TBase (TLambda (TLambda (TPlus (TVar (Name "x"), TVar (Name "y")), Name "x",TypeVar (Name "b")),Name "y",TypeVar (Name "a")))
-
-let f = TBase (TLambda (TPlus (TInt 2, TVar (Name "b")),Name "b", Boolean))
-
-let print = TBase (TLambda (TPrint(TVar (Name "x")),Name "x",TypeVar (Name "a")))
-
-let complicated = TBase (TLambda (TLambda(TPrint(TApplication(TVar (Name "f"), TVar (Name "x"))),Name "x",TypeVar (Name "b")),Name "f",TypeVar (Name "a")))
-
-let firstlet = TLet (Name "x", TBase(TInt 5), TBase(TVar (Name "x")))
-let id = TBase (TLambda(TVar (Name "x"), Name "x", TypeVar (Name "a")))
-let sndlet = TLetRec (Name "x", TypeVar(Name "b") , id, TBase(TVar (Name "x")))
-let nested_let = TLet(Name "x", TBase (TInt 1), TLet (Name "x", TBase(TBool true), TBase(TVar (Name "x"))))
-let interesting = TLet(Name "x", id, TBase(TApplication(TVar(Name "x"), TVar(Name "x"))))
-let test_infer_prod = TBase (TLambda (TPrint(TProj (TVar (Name "x"),0,2)), Name "x", TypeVar (Name "a")))
-
-let _ = print_endline "entering new section"
-let _ = show_type test_infer_prod
-
-
+let _ = print_endline (string_of_class_constrained_expr_type (fst (typecheck fact fact_start)))

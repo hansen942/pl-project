@@ -7,17 +7,17 @@ let init_name = Sub 0
 let filename = ref ""
 let nocheck = ref false
 
-(** [run_prog] first typechecks its input, then evaluates it*)
-let run_prog tsugar init_name =
-  let t,e = typecheck tsugar init_name in
+(** [run_prog'] first typechecks its input, then evaluates it*)
+let run_prog' tsugar init_name =
+  let t,e,fresh = typecheck tsugar init_name in
   if !nocheck then () else
   print_endline (string_of_class_constrained_expr_type t);
-  eval (desugar e)
-
+  eval (desugar e) fresh
 
 let options = [
   "-nocheck", Arg.Unit (fun _ -> nocheck := true), "Disable type checker"
 ]
+
 
 let _ =
   (* (1) Parse the command-line arguments. *)
@@ -40,8 +40,8 @@ let _ =
         pos.Lexing.pos_lnum (pos.Lexing.pos_cnum - pos.Lexing.pos_bol);
       exit 1 in
   (* fill in empty annotations, and for now just print expression *)
-  match annotate_opt_t_sugar e init_name with
-  (tsug, name) -> run_prog tsug name
+  match annotate_opt_t_expr e init_name with
+  (tsug, name) -> run_prog' tsug name
   
 
 

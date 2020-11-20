@@ -124,21 +124,21 @@ match e with
     )
   | _ -> failwith "cannot project an expression that is not a product"
 )
-| Int _ -> return e
-| Bool _ -> return e
-| Lambda _ -> return e
-| Var _ -> return e
-| Unit -> return Unit
+| Int _ -> failwith "should never try to step value"
+| Bool _ -> failwith "should never try to step value"
+| Lambda _ -> failwith "should never try to step value"
+| Var _ -> failwith "should never try to step value"
+| Unit -> failwith "should never try to step value"
 | Print e -> fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
-| Sum _ -> return e
-| Prod _ -> return e
+| Sum _ -> failwith "should never try to step value"
+| Prod _ -> failwith "should never try to step value"
 
 
 and eval' e s =
   if is_val e then e else
   let e', s' = smallstep e s in eval' e' s'
 
-let eval e : expr = eval' e init_name
+let eval e s : expr = eval' e s 
 
 (* This small test case checks sub *)
 (*

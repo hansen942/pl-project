@@ -30,9 +30,7 @@ ocamlc.opt -c -o main.cmo main.ml # cached
 # Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
 # Target: evallambda.ml.depends, tags: { extension:ml, file:evallambda.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules evallambda.ml > evallambda.ml.depends # cached
-# Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o evallambda.cmx evallambda.ml # cached
+ocamldep.opt -modules evallambda.ml > evallambda.ml.depends
 # Target: parser.ml.depends, tags: { extension:ml, file:parser.ml, ocaml, ocamldep, quiet }
 ocamldep.opt -modules parser.ml > parser.ml.depends # cached
 # Target: parser.cmx, tags: { compile, extension:cmx, extension:ml, file:parser.cmx, file:parser.ml, implem, native, ocaml, quiet }
@@ -43,8 +41,42 @@ ocamlopt.opt -c -o lexer.cmx lexer.ml # cached
 ocamldep.opt -modules typecheck.ml > typecheck.ml.depends # cached
 # Target: typecheck.cmx, tags: { compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
 ocamlopt.opt -c -o typecheck.cmx typecheck.ml # cached
+# Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
+ocamlopt.opt -c -o evallambda.cmx evallambda.ml
++ ocamlopt.opt -c -o evallambda.cmx evallambda.ml
+File "evallambda.ml", line 35, characters 2-1682:
+35 | ..match e with
+36 |   | Application (e1,e2) ->
+37 |     let* e1' = subin e1 in
+38 |     let* e2' = subin e2 in
+39 |     return (Application (e1',e2'))
+...
+75 |   | Prod elist ->
+76 |     let* elist' = fold_right (fun x acc -> let* x' = subin x in let*acc' = acc in return(x'::acc')) elist (return []) in
+77 |     return (Prod elist')
+78 |   | Proj(e,n) -> let* e' = subin e in return(Proj(e',n))
+Warning 8: this pattern-matching is not exhaustive.
+Here is an example of a case that is not matched:
+(Sum (_, _)|Match (_, _))
+File "evallambda.ml", line 116, characters 4-5:
+116 |   | _ -> failwith (Printf.sprintf "cannot match on %s, it is not a sum type" (string_of_expr e))
+          ^
+Warning 11: this match case is unused.
+File "evallambda.ml", line 110, characters 21-317:
+110 | .....................(
+111 |   match e with
+112 |   | Sum (uname,e) ->
+113 |     match assoc_opt uname matches with
+114 |     | None -> failwith (Printf.sprintf "match failed, no case for %s" uname)
+115 |     | Some f -> return (Application(f,e))
+116 |   | _ -> failwith (Printf.sprintf "cannot match on %s, it is not a sum type" (string_of_expr e))
+117 |   )
+Warning 8: this pattern-matching is not exhaustive.
+Here is an example of a case that is not matched:
+(Unit|Int _|Var _|Lambda (_, _)|Application (_, _)|If (_, _, _)|Bool _|
+Plus (_, _)|Times (_, _)|Eq (_, _)|Print _|Prod _|Match (_, _)|Proj (_, _))
 # Target: main.cmx, tags: { compile, extension:cmx, extension:ml, file:main.cmx, file:main.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o main.cmx main.ml # cached
+ocamlopt.opt -c -o main.cmx main.ml
 # Target: main.native, tags: { dont_link_with, extension:native, file:main.native, link, native, ocaml, program, quiet }
-ocamlopt.opt definitions.cmx evallambda.cmx parser.cmx lexer.cmx typecheck.cmx main.cmx -o main.native # cached
+ocamlopt.opt definitions.cmx evallambda.cmx parser.cmx lexer.cmx typecheck.cmx main.cmx -o main.native
 # Compilation successful.
