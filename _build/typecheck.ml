@@ -50,62 +50,10 @@ let rec strip : typed_expr -> sugar = function
    Ideally this would be a map but setting this up is giving me issues so I'm starting by using an association list.
    Invariant is that keys should not appear more than once (otherwise [remove_assoc] will not remove all bindings.*)
 type venv = (var_name * expr_type) list
-type user_type_env = (user_var_name * expr_type) list
 
 let undeclared_error v =  Printf.sprintf "The variable %s is undeclared" (string_of_var v)
 let inferred_mismatch e t reason found = Printf.sprintf "Expression %s was expected to have type %s because %s but its actual type is %s" (string_of_typed_expr e) (string_of_type t) reason (string_of_type found)
 let declared_mismatch_error v declared got = Printf.sprintf "%s had declared type %s but was equated to an expression of type %s" (string_of_var v) (string_of_type declared) (string_of_type got)
-
-(*Note: this has not been updated to deal with sums and products *)
-(*
-let rec tcheck_simple venv : typed_expr -> (error_msg,expr_type) either = function
-| TInt _ -> return Integer 
-| TBool _ -> return Boolean 
-| TVar v -> (match assoc_opt v venv with Some t -> return t | None -> Left (undeclared_error v))
-| TPlus (e1,e2) ->
-  let* t1 = tcheck_simple venv e1 in
-  let* t2 = tcheck_simple venv e2 in
-  if t1 != Integer then Left (inferred_mismatch e1 Integer "it appears in a plus formula" t1) else
-  if t2 != Integer then Left (inferred_mismatch e2 Integer "it appears in a plus formula" t2) else
-  return Integer
-| TTimes (e1,e2) ->
-  let* t1 = tcheck_simple venv e1 in
-  let* t2 = tcheck_simple venv e2 in
-  if t1 <> Integer then Left (inferred_mismatch e1 Integer "it appears in a plus formula" t1) else
-  if t2 <> Integer then Left (inferred_mismatch e2 Integer "it appears in a plus formula" t2) else
-  return Integer
-| TLambda (e,v,tv) ->
-  let venv' = (v,tv)::venv in
-  let* tbody = tcheck_simple venv' e in
-  return (Fun(tv,tbody))
-| TApplication (e1,e2) ->
-  let* t1 = tcheck_simple venv e1 in
-  let* t2 = tcheck_simple venv e2 in
-  (match t1 with
-  | Fun (targ,treturn) ->
-    (
-      if targ <> t2 then Left (inferred_mismatch e2 targ (Printf.sprintf "it is given as an argument to %s which has type %s" (string_of_typed_expr e1) (string_of_type t1)) t1)
-      else return treturn
-    )
-    | _ -> Left (Printf.sprintf "%s is not a function (it has type %s), it cannot be applied" (string_of_typed_expr e1) (string_of_type t1))
-  )
-| TIf (e1,e2,e3) ->
-  let* t1 = tcheck_simple venv e1 in
-  let* t2 = tcheck_simple venv e2 in
-  let* t3 = tcheck_simple venv e3 in
-  if t1 <> Boolean then Left (inferred_mismatch e1 Boolean "it appears in the guard of an if expression" t1)
-  else if t2 <> t3 then Left (inferred_mismatch e3 t2 (Printf.sprintf "it appears as an alternative outcome to %s : %s in an if expression" (string_of_typed_expr e2) (string_of_type t2)) t3)
-  else return t2
-| TEq (e1,e2) ->
-  let* t1 = tcheck_simple venv e1 in
-  let* t2 = tcheck_simple venv e2 in
-  if t1 <> t2 then Left (inferred_mismatch e2 t1 (Printf.sprintf "it is compared to %s : %s" (string_of_typed_expr e1) (string_of_type t1)) t2)
-  else return Boolean
-| TUnit -> return UnitType
-| TPrint e ->
-  let* t = tcheck_simple venv e in
-  if printable t then return UnitType else Left (Printf.sprintf "Expected %s to be a printable expression, as it appears in a print statement, but it has type %s" (string_of_typed_expr e) (string_of_type t))
-*)
 
 
 type tconstraint =
@@ -132,16 +80,19 @@ let draw_name : (var_name,constraints * var_name) state = function
   | (c,Sub n) -> (Sub n,(c,Sub (n+1)))
   | _ -> failwith "type variable source corrupted, unable to draw name"
 
-let update_sub sub1 sub2 =
-map (fun x -> match x with (t,t') ->
-  (match t' with
-  | TypeVar v ->
-    (match assoc_opt v sub2 with
-    | None -> (t,t')
-    | Some t'' -> (t,t''))
-  | _ -> (t,t')
-  )
-  ) sub1
+(** [sub_vars sub_map t] gives back the type [t] but with type variables substituted as specificied in [sub_map] *)
+let rec sub_vars sub_map t = 
+  match t with
+  | Fun (t1,t2) -> Fun (sub_vars sub_map t1, sub_vars sub_map t2)
+  | TypeVar a ->
+    (match assoc_opt a sub_map with
+    | None -> t 
+    | Some t' -> t')
+  | Product tlist -> Product (fold_right (fun x acc -> (sub_vars sub_map x)::acc) tlist [])
+  | SumType _ -> failwith "unimplemented"
+  | _ -> t
+
+let update_sub sub1 sub2 = map (fun (x,y) -> (x,sub_vars sub2 y)) sub1
 
 (*[sub_comp sub2 sub1] gives back the composite map sub2 \circ sub1.
   Precondition: The domains of sub1 and sub2 are disjoint*)
@@ -160,7 +111,8 @@ let cons_map f = function
    we pull out all the typeclass constraints to be dealt with later and then do the normal
    unification algo. [classes] is the set of class constraints that remain to be dealt with,
    and are written in terms of the original variables that came out of [simple_check']*)
-let rec unify' classes = function
+let rec unify' classes x =
+match x with
 | [] -> (classes,[])
 | (TypeClass (t1,c))::t -> unify' ((t1,c)::classes) t
 | (Equality (t1,t2))::cons_tail ->
@@ -214,15 +166,6 @@ let pull_name = function
   | Sub n -> (Sub n, Sub (n+1))
   | _ -> failwith "fresh name source corrupted"
 
-(** [sub_vars sub_map t] gives back the type [t] but with type variables substituted as specificied in [sub_map] *)
-let rec sub_vars sub_map t = 
-  match t with
-  | Fun (t1,t2) -> Fun (sub_vars sub_map t1, sub_vars sub_map t2)
-  | TypeVar a ->
-    (match assoc_opt a sub_map with
-    | None -> t 
-    | Some t' -> t')
-  | _ -> t
 
 let weakest_class_constraint = function
   |(TypeVar v,Printable) -> [(v,[Printable])]
@@ -369,47 +312,47 @@ let rec instance_sub v t known_classes e2  =
       return'((c,e')::e_acc, combine_maps venv_acc venv', combine_maps k_acc known')) cases (return' ([],[],[])) in
       return' (TMatch(e',cases'),combine_maps v' venv', combine_maps k' known')
 
-let rec tcheck_simple' venv known_classes : typed_expr -> (expr_type,constraints * var_name) state = function
+let rec tcheck' venv known_classes : typed_expr -> (expr_type,constraints * var_name) state = function
 | TInt _ -> return' Integer
 | TBool _ -> return' Boolean
 | TVar v -> (match assoc_opt v venv with
              | Some t -> return' t
 	     | None -> failwith (undeclared_error v))
 | TPlus (e1,e2) ->
-  let^ t1 = tcheck_simple' venv known_classes e1 in
-  let^ t2 = tcheck_simple' venv known_classes e2 in
+  let^ t1 = tcheck' venv known_classes e1 in
+  let^ t2 = tcheck' venv known_classes e2 in
   constrain t1 Integer () >>=^ constrain t2 Integer >>=^ ignore(return' Integer)
 | TTimes (e1,e2) ->
-  let^ t1 = tcheck_simple' venv known_classes e1 in
-  let^ t2 = tcheck_simple' venv known_classes e2 in
+  let^ t1 = tcheck' venv known_classes e1 in
+  let^ t2 = tcheck' venv known_classes e2 in
   constrain t1 Integer () >>=^ constrain t2 Integer >>=^ ignore(return' Integer)
 | TLambda (e,v,tv) ->
   let venv' = (v,tv)::venv in
-  let^ tbody = tcheck_simple' venv' known_classes e in
+  let^ tbody = tcheck' venv' known_classes e in
   return' (Fun(tv,tbody))
 | TApplication (e1,e2) ->
-  let^ t1 = tcheck_simple' venv known_classes e1 in
-  let^ t2 = tcheck_simple' venv known_classes e2 in
+  let^ t1 = tcheck' venv known_classes e1 in
+  let^ t2 = tcheck' venv known_classes e2 in
   let^ new_name = draw_name in
   constrain t1 (Fun(t2,TypeVar new_name)) () >>=^ ignore(return' (TypeVar new_name))
 | TIf (e1,e2,e3) ->
-  let^ t1 = tcheck_simple' venv known_classes e1 in
-  let^ t2 = tcheck_simple' venv known_classes e2 in
-  let^ t3 = tcheck_simple' venv known_classes e3 in
+  let^ t1 = tcheck' venv known_classes e1 in
+  let^ t2 = tcheck' venv known_classes e2 in
+  let^ t3 = tcheck' venv known_classes e3 in
   constrain t1 Boolean () >>=^ constrain t2 t3 >>=^ ignore (return' t2)
 | TEq (e1,e2) ->
-  let^ t1 = tcheck_simple' venv known_classes e1 in
-  let^ t2 = tcheck_simple' venv known_classes e2 in
+  let^ t1 = tcheck' venv known_classes e1 in
+  let^ t2 = tcheck' venv known_classes e2 in
   constrain t1 t2 () >>=^ ignore(return' Boolean)
 | TUnit -> return' UnitType
 | TPrint e ->
-  let^ t = tcheck_simple' venv known_classes e in
+  let^ t = tcheck' venv known_classes e in
   class_constrain t (Printable) () >>=^ ignore(return' UnitType)
 | TSum (cons,texpr) ->
   (*TODO: to get this case, we need to add an environment of defined sum types so that we verify the constructor exists and find the associated sum type *)
   failwith "unimplemented"
 | TProd elist ->
-  let^ tlist = fold_right (fun x acc -> let^ t_new = tcheck_simple' venv known_classes x in let^ acc' = acc in return' (t_new::acc')) elist (return' []) in
+  let^ tlist = fold_right (fun x acc -> let^ t_new = tcheck' venv known_classes x in let^ acc' = acc in return' (t_new::acc')) elist (return' []) in
   return' (Product tlist)
 | TMatch (e,cases) ->
   (* not much point implementing this when we don't have sums yet.
@@ -428,11 +371,11 @@ let rec tcheck_simple' venv known_classes : typed_expr -> (expr_type,constraints
     in
   let make_gen_prod l = let^ tlist = make_gen_prod' 0 [] l in return' ((Product tlist),nth tlist n) in
   let^ gen_prod,t_out = make_gen_prod l in
-  let^ te = tcheck_simple' venv known_classes e in
+  let^ te = tcheck' venv known_classes e in
   constrain te gen_prod () >>=^ ignore(return' t_out)
 | TLet (v,e1,e2) ->
     (fun (constraints,fresh) ->
-    let t1,fresh,var_constraints = tcheck_simple_compact venv e1 fresh known_classes in
+    let t1,fresh,var_constraints = tcheck_compact venv e1 fresh known_classes in
     let venv = (v,t1)::venv in
     (* do instance-based type substitution into e2 *)
     (* for using instance_sub we only care about the class constraints for free type variables
@@ -446,13 +389,14 @@ let rec tcheck_simple' venv known_classes : typed_expr -> (expr_type,constraints
     let new_venv : (var_name * expr_type) list = venv @ v_local_venv in
     let new_known : (var_name * (type_class list)) list = known_classes @ v_local_known in
     (* now we can finally check our new e2' --- we did not increase the number of constraints
-       because tcheck_simple_compact will have called unify to eliminate all the new constraints created in e1,
+       because tcheck_compact will have called unify to eliminate all the new constraints created in e1,
        leaving only the new type class constraints that go into new_known*)
-    tcheck_simple' new_venv new_known e2' (constraints,fresh))
+    tcheck' new_venv new_known e2' (constraints,fresh))
 | TLetRec (v,tv,e1,e2) ->
     (fun (constraints,fresh) ->
     let venv = (v,tv)::venv in
-    let t1,fresh,var_constraints = tcheck_simple_compact venv e1 fresh known_classes in
+    let application_trick = (TApplication((TLambda(TVar(Name "x"), Name "x", tv), e1))) in
+    let t1,fresh,var_constraints = tcheck_compact venv application_trick fresh known_classes in
     (* do instance-based type substitution into e2 *)
     (* for using instance_sub we only care about the class constraints for free type variables
        of t1, so we compute these constraints first as v_local_class.*)
@@ -465,14 +409,14 @@ let rec tcheck_simple' venv known_classes : typed_expr -> (expr_type,constraints
     let new_venv : (var_name * expr_type) list = venv @ v_local_venv in
     let new_known : (var_name * (type_class list)) list = known_classes @ v_local_known in
     (* now we can finally check our new e2' --- we did not increase the number of constraints
-       because tcheck_simple_compact will have called unify to eliminate all the new constraints created in e1,
+       because tcheck_compact will have called unify to eliminate all the new constraints created in e1,
        leaving only the new type class constraints that go into new_known*)
-    tcheck_simple' new_venv new_known e2' (constraints,fresh))
+    tcheck' new_venv new_known e2' (constraints,fresh))
 | NewSum _ -> failwith "unimplemented"
 
-and tcheck_simple_compact venv texpr fresh_tvar known_classes =
+and tcheck_compact venv texpr fresh_tvar known_classes =
   (* The checker outputs a type together with constraints and the next available type variable *)
-  let out = tcheck_simple' venv known_classes texpr ([],fresh_tvar) in 
+  let out = tcheck' venv known_classes texpr ([],fresh_tvar) in 
   let t = fst out in
   let classes_required,sub_map = unify (fst (snd out)) in
   let next_tvar = snd (snd out) in
@@ -491,12 +435,10 @@ and tcheck_simple_compact venv texpr fresh_tvar known_classes =
   let all_class_constraints = all_var_constraints @ empty_class_constraints in
   (t_out, next_tvar, all_class_constraints)
 
-and tcheck' (venv : (var_name * expr_type) list) (known_classes : (var_name * (type_class list)) list) expr : (class_constrained_expr_type,var_name) state =
-    (fun name -> 
-    (*just call tcheck_simple_compact in order to get the type *)
-    match tcheck_simple_compact venv expr name known_classes with
+let tcheck venv known_classes expr name : class_constrained_expr_type * var_name =
+    (*just call tcheck_compact in order to get the type *)
+    match tcheck_compact venv expr name known_classes with
     | (t,fresh_out,class_out) -> ((t,class_out),fresh_out)
-    )
 
 let print_sub_map =
   List.iter (fun x -> match x with (vname, etype) -> (Printf.printf "%s ↦ %s" (string_of_var vname) (string_of_type etype); print_newline ()))
@@ -509,5 +451,5 @@ let print_sub_map =
     The output of the function is a pair [expr_type * var_name] giving the next fresh
     type variable name that is available and the type of the expression that you put in*)
 let typecheck sugar_e init_name =
-  let mtype,fresh= tcheck' [] [] sugar_e init_name in (mtype, strip sugar_e, fresh)
+  let mtype,fresh= tcheck [] [] sugar_e init_name in (mtype, strip sugar_e, fresh)
 

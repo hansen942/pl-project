@@ -200,7 +200,7 @@ type expr_type =
 | UnitType
 | TypeVar of var_name
 | Product of expr_type list
-| SumType of user_var_name * ((user_var_name * expr_type) list)
+| SumType of user_var_name * (expr_type list) (* only put type name and parametric types because will not be known until later. Constructors but into a context *) 
 (*TODO: these extensions*)
 (*
 and user_type =
@@ -220,7 +220,7 @@ let rec ftv = function
 | UnitType -> []
 | TypeVar v -> [v]
 | Product tlist -> fold_left (fun acc x -> naive_list_union acc (ftv x)) [] tlist
-| SumType (name,constructors) -> fold_left (fun acc x -> naive_list_union acc (ftv (snd x))) [] constructors
+| SumType (name,args) -> fold_left (fun acc x -> naive_list_union acc (ftv x)) [] args
 
 let rec tsub t_new tvar = fun t ->
   match t with
@@ -228,7 +228,7 @@ let rec tsub t_new tvar = fun t ->
   | Fun (t1,t2) ->
     Fun (tsub t_new tvar t1, tsub t_new tvar t2)
   | Product tlist -> Product (map (tsub t_new tvar) tlist)
-  | SumType (name,constructors) -> SumType (name,(map (fun (c,ct)-> (c,tsub t_new tvar ct)) constructors))
+  | SumType (name,args) -> SumType (name,(map (tsub t_new tvar) args))
   | _ -> t
 
 let rec string_of_type = function
@@ -242,13 +242,12 @@ let rec string_of_type = function
   in
   Printf.sprintf "%s →  %s" s1 (string_of_type t2)
 | UnitType -> "unit"
-| SumType (name,constructors) ->
-  let cons_strings = map (fun (c,ct) -> c ^ " " ^ (string_of_type ct)) constructors in
-  name ^ " = " ^
-  (match cons_strings with
-  | [] -> "void"
-  | h::t -> "sum " ^ h ^ (fold_left (fun acc x -> "| " ^ x)) "" t
-  )
+| SumType (name,args) ->
+  (match args with
+  | [] -> name
+  | _ ->
+  let arg_string = fold_right (fun x acc -> " " ^ (string_of_type x) ^ acc) args "" in
+  name ^ arg_string) 
 | Product tlist ->
   let entries = map string_of_type tlist in
   (match entries with
@@ -339,7 +338,8 @@ let rec printable : expr_type -> bool = function
 | Integer -> true
 | Boolean -> true
 | Fun _ -> false
-| SumType (name,cons) -> for_all printable (map snd cons)
+| SumType (name,args) -> failwith "unimplemented"
+(* we also need to know the actual structure of the sumtype from the context*)
 | Product tlist -> for_all printable tlist
 | TypeVar _ -> false
 

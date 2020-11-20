@@ -1,5 +1,4 @@
-open OUnit2
-open Definitions
+open OUnit2 open Definitions
 open Typecheck
 
 let init_name = Sub 0
@@ -11,12 +10,15 @@ let tsug_from_string s =
 
 (** [run_prog] first typechecks its input, then evaluates it. init_name is a name that is not currently used as a type variable*)
 let run_prog tsugar init_name =
-  let t,e = typecheck tsugar init_name in
-  Evallambda.eval (desugar e)
+  let t,e,n = typecheck tsugar init_name in
+  Evallambda.eval (desugar e) n
 
-let show_type tsugar = print_endline (string_of_class_constrained_expr_type (fst (typecheck tsugar init_name)))
-let simple_type e = fst(fst(typecheck e init_name))
-let simple_type_w_start e start = fst(fst(typecheck e start))
+let quick_get_type tsugar = match (typecheck tsugar init_name) with x,_,_ -> x
+let quick_show_type tsugar = print_endline (string_of_class_constrained_expr_type (quick_get_type tsugar))
+let simple_type tsugar = fst (quick_get_type tsugar) 
+let simple_type_w_start e start = match (typecheck e start) with x,_,_ -> fst x
+let show_type_w_start tsugar start = print_endline (string_of_class_constrained_expr_type (match (typecheck tsugar start) with x,_,_ -> x))
+
 let int_id = fst(tsug_from_string "lambda x : int . x") 
 let just_int = (TInt 0)
 let just_bool = (TBool true)
@@ -70,16 +72,19 @@ let let_rec_tests = "test suite with let rec expressions" >::: [
   "subtle" >:: (fun _ -> assert_equal true (match (simple_type_w_start subtle subtle_start) with Fun(TypeVar a, TypeVar b) -> a = b | _ -> false));
 ]
 let infer_prod,infer_prod_start = tsug_from_string "lambda x . print (proj 2 0 x)"
+(* this test shows our inference constrains to the specified type *)
+let annotated,annotated_start = tsug_from_string "let rec f : int -> int = lambda x . x in f"
 
 let infer_tests = "test suite for type inference" >::: [
-  "product_fun" >:: (fun _ -> assert_equal true (match (fst(fst(typecheck infer_prod infer_prod_start))) with
+  "annotated" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type_w_start annotated annotated_start));
+  "product_fun" >:: (fun _ -> assert_equal true (match (simple_type_w_start infer_prod infer_prod_start) with
       | Fun(Product [TypeVar a; TypeVar b], UnitType) -> a <> b
       | _ -> false));
 ]
 
 let type_test_suite = "type tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests]
 
-let fact_5,fact_5_start = tsug_from_string "let rec fact = lambda x . if x = 0 then 1 else x * (fact (x + (-1))) in fact 5"
+let fact_5,fact_5_start = tsug_from_string "let rec fact x = if x = 0 then 1 else x * (fact (x + (-1))) in fact 5"
 let app_prod = ( (TApplication( infer_prod, TProd[TInt 5; TBool false])))
 
 let run_prog_tests = "test suite that uses main to run some test programs" >:::[

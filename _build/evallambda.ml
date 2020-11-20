@@ -124,14 +124,16 @@ match e with
     )
   | _ -> failwith "cannot project an expression that is not a product"
 )
-| Int _ -> failwith "should never try to step value"
-| Bool _ -> failwith "should never try to step value"
-| Lambda _ -> failwith "should never try to step value"
-| Var _ -> failwith "should never try to step value"
-| Unit -> failwith "should never try to step value"
+| Int _ -> return e 
+| Bool _ -> return e 
+| Lambda _ -> return e 
+| Var _ -> return e  
+| Unit -> return e 
 | Print e -> fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
-| Sum _ -> failwith "should never try to step value"
-| Prod _ -> failwith "should never try to step value"
+| Sum (c,e) -> let* e' = smallstep e in return (Sum (c,e'))
+| Prod elist ->
+  let* elist' = fold_right (fun x acc -> let* x' = smallstep x in let* acc' = acc in return(x'::acc')) elist (return []) in
+  return (Prod elist')
 
 
 and eval' e s =
