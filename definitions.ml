@@ -274,17 +274,23 @@ let rec string_of_typed_expr : typed_expr -> string = function
 (** [typed_sugar] is a sugary version of [typed_expr].
     The idea is that [typed_sugar] keeps track of where [let] and [let rec] are used. *)
 type typed_sugar =
-| NewSum of user_var_name * (user_var_name * expr_type) list
+| NewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * typed_sugar (* new type name, type variables used, constructors by types, next expression *)
 | TLet of var_name * typed_sugar * typed_sugar
 | TLetRec of var_name * expr_type * typed_sugar * typed_sugar
 | TBase of typed_expr
 
+let quick_strip_tsugar = function
+| TBase e -> e
+| _ -> failwith "cannot strip let expressions"
+
 let rec string_of_typed_sugar : typed_sugar -> string = function
-| NewSum (name,cons) ->(
+| NewSum (name,vars,cons,s) ->(
+  let bind_vars = fold_right (fun x acc -> x ^ " " ^ acc) vars "" in
   match cons with
   | [] -> Printf.sprintf "%s = void" name
   | h::t -> let body = match h with (ch,th) -> ch ^ " " ^ (string_of_type th) ^ (fold_right (fun (c,t) acc -> (Printf.sprintf " | %s %s" c (string_of_type t)) ^ acc) t "") in
-  Printf.sprintf "newtype %s = %s" name body
+  let dec = Printf.sprintf "newtype %s %s = %s" name bind_vars body in
+  Printf.sprintf "%s in %s" dec (string_of_typed_sugar s)
   )
 | TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_sugar e1) (string_of_typed_sugar e2)
@@ -299,10 +305,114 @@ let rec printable : expr_type -> bool = function
 | SumType (name,cons) -> for_all printable (map snd cons)
 | Product tlist -> for_all printable tlist
 | TypeVar _ -> false
-(** [def] is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet. *)
-type 'a def =
-| Value of user_var_name * 'a 
-| NewSum of user_var_name * ((user_var_name * (expr_type list)) list)
-| NewProd of user_var_name * (expr_type list)
 
-type prog = ((typed_expr def) list) * (typed_expr option)
+(* these types only have optional type annotations *)
+type opt_t_expr = 
+| OInt of int
+| OBool of bool
+| OVar of var_name
+| OPlus of opt_t_expr * opt_t_expr 
+| OTimes of opt_t_expr * opt_t_expr
+| OLambda of opt_t_expr * var_name * (expr_type option)
+| OApplication of opt_t_expr * opt_t_expr
+| OIf of opt_t_expr * opt_t_expr * opt_t_expr
+| OEq of opt_t_expr * opt_t_expr
+| OUnit
+| OPrint of opt_t_expr
+| OSum of user_var_name * opt_t_expr
+| OProd of opt_t_expr list
+| OMatch of opt_t_expr * ((user_var_name * opt_t_expr) list)
+| OProj of opt_t_expr * int * int
+
+type opt_t_sugar =
+| ONewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * opt_t_sugar (* new type name, type variables used, constructors by types *)
+| OLet of var_name * opt_t_sugar * opt_t_sugar 
+| OLetRec of var_name * (expr_type option) * opt_t_sugar * opt_t_sugar 
+| OBase of opt_t_expr 
+
+type ('a,'s) state = 's -> ('a * 's)
+let return x = fun s -> (x,s)
+(* this is standard bind *) 
+let (>>=) (init_state:('a,'s) state) (transform:'a -> ('b,'s) state) =
+  (fun old_state ->
+  let first_val, first_state = init_state old_state in
+  transform first_val first_state
+  )
+let (let*) x f = x >>= f
+
+let init_name = Sub 0
+let pull_name = function
+| Sub n -> (Sub n, Sub (n+1))
+| _ -> failwith "internal error" 
+
+let rec annotate_opt_t_expr' oexpr =
+  let f = annotate_opt_t_expr' in
+  match oexpr with
+  | OInt n -> return(TInt n)
+  | OBool b -> return(TBool b)
+  | OVar v -> return(TVar v)
+  | OPlus(e1,e2) ->
+    let* e1' = f e1 in
+    let* e2' = f e2 in
+    return(TPlus(e1',e2'))
+  | OTimes(e1,e2) ->
+    let* e1' = f e1 in
+    let* e2' = f e2 in
+    return(TTimes(e1',e2'))
+  | OLambda(e1,v,t_opt) ->
+    let* e1' = f e1 in
+    let* t =
+    match t_opt with
+    | Some t -> return t
+    | None -> let* name = pull_name in return(TypeVar(name))
+    in
+    return(TLambda(e1',v,t))
+  | OApplication(e1,e2) ->
+    let* e1' = f e1 in
+    let* e2' = f e2 in
+    return(TApplication(e1',e2'))
+  | OIf(e1,e2,e3) ->
+    let* e1' = f e1 in
+    let* e2' = f e2 in
+    let* e3' = f e3 in
+    return(TIf(e1',e2',e3'))
+  | OEq(e1,e2) ->
+    let* e1' = f e1 in
+    let* e2' = f e2 in
+    return(TEq(e1',e2'))
+  | OPrint(e) ->
+    let* e' = f e in
+    return(TPrint(e'))
+  | OSum(name,e) ->
+    let* e' = f e in
+    return(TSum(name,e'))
+  | OProd(elist) ->
+    let* elist' = fold_right (fun x acc -> let* x' = f x in let* acc' = acc in return(x'::acc')) elist (return []) in
+    return(TProd(elist'))
+  | OMatch(e,cases) ->
+    let* e' = f e in
+    let* cases' = fold_right (fun (cons,e) acc -> let* e' = f e in let* acc' = acc in return((cons,e')::acc')) cases (return []) in
+    return(TMatch(e',cases'))
+  | OProj(e,i,l) ->
+    let* e' = f e in
+    return(TProj(e',i,l))
+
+let rec annotate_opt_t_sugar sug =
+  let g = annotate_opt_t_sugar in
+  let f = annotate_opt_t_expr' in
+  match sug with
+  | OLet(v,e1,e2) ->
+    let* e1' = g e1 in
+    let* e2' = g e2 in
+    return(TLet(v,e1',e2'))
+  | OLetRec(v,t_opt,e1,e2) ->
+    let* t =
+    match t_opt with
+    | None -> let* name = pull_name in return(TypeVar(name))
+    | Some t -> return t
+    in
+    let* e1' = g e1 in
+    let* e2' = g e2 in
+    return(TLetRec(v,t,e1',e2'))
+  | OBase(e) -> let* e' = f e in return(TBase e')
+  | ONewSum (w,x,y,z) -> let* z' = g z in return(NewSum (w,x,y,z')) 

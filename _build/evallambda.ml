@@ -72,6 +72,10 @@ let rec sub e e_x x : (expr, eval_state) state =
     return (Eq (e1',e2'))
   | Unit -> return Unit
   | Print e -> let* e' = subin e in return (Print e')
+  | Prod elist ->
+    let* elist' = fold_right (fun x acc -> let* x' = subin x in let*acc' = acc in return(x'::acc')) elist (return []) in
+    return (Prod elist')
+  | Proj(e,n) -> let* e' = subin e in return(Proj(e',n))
 
 and smallstep e : (expr, eval_state) state =
 match e with
@@ -103,13 +107,31 @@ match e with
   let* e1' = smallstep e1 in
   let* e2' = smallstep e2 in
   return (Eq (e1',e2'))
+| Match(e,matches) ->(
+  match e with
+  | Sum (uname,e) ->
+    match assoc_opt uname matches with
+    | None -> failwith (Printf.sprintf "match failed, no case for %s" uname)
+    | Some f -> return (Application(f,e))
+  | _ -> failwith (Printf.sprintf "cannot match on %s, it is not a sum type" (string_of_expr e))
+  )
+| Proj(e,n) ->(
+  match e with
+  | Prod elist ->(
+    match nth_opt elist n with
+    | None -> failwith "index out of bounds"
+    | Some e' -> return e'
+    )
+  | _ -> failwith "cannot project an expression that is not a product"
+)
 | Int _ -> return e
 | Bool _ -> return e
 | Lambda _ -> return e
 | Var _ -> return e
 | Unit -> return Unit
-| Print e ->
- fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
+| Print e -> fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
+| Sum _ -> return e
+| Prod _ -> return e
 
 
 and eval' e s =

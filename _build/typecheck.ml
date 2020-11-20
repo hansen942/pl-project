@@ -555,6 +555,6 @@ let rec tcheck venv : typed_sugar -> (error_msg,expr_type) either = function
     tcheck venv' e2 
 *)
 
-let typecheck sugar_e =
+let typecheck sugar_e init_name =
   let mtype = fst (tcheck' [] [] sugar_e init_name) in (mtype, strip sugar_e)
 

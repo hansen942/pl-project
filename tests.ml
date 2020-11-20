@@ -1,6 +1,7 @@
 open OUnit2
 open Definitions
 open Typecheck
+open Main
 
 let show_type tsugar = print_endline (string_of_class_constrained_expr_type (fst (typecheck tsugar)))
 let simple_type e = fst(fst(typecheck e))
@@ -46,24 +47,35 @@ let let_tests = "test suite with let expressions" >::: [
    
 ]
 
-let fact = 
-  let fact' =
-    let n = Name "n" in
-    TBase (TLambda (TIf(TEq(TVar n,TInt 0),TInt 1, TTimes(TVar n,TApplication (TVar (Name "f"), TPlus (TVar n,TInt (-1))))), n, TypeVar (Name "a")))
-  in
-  TLetRec(Name "f", TypeVar (Name "b") , fact', TBase(TVar (Name "f")))
+let fact' =
+  let n = Name "n" in
+  TBase (TLambda (TIf(TEq(TVar n,TInt 0),TInt 1, TTimes(TVar n,TApplication (TVar (Name "f"), TPlus (TVar n,TInt (-1))))), n, TypeVar (Name "a")))
+let fact = TLetRec(Name "f", TypeVar (Name "b") , fact', TBase(TVar (Name "f")))
 
 let let_rec_tests = "test suite with let rec expressions" >::: [
   "fact" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type fact));
 ]
 
-let test_infer_prod = TBase (TLambda (TPrint(TProj (TVar (Name "x"),0,2)), Name "x", TypeVar (Name "a")))
+let infer_prod = TBase (TLambda (TPrint(TProj (TVar (Name "x"),0,2)), Name "x", TypeVar (Name "a")))
+
 let infer_tests = "test suite for type inference" >::: [
-  "product_fun" >:: (fun _ -> assert_equal true (match simple_type test_infer_prod with
+  "product_fun" >:: (fun _ -> assert_equal true (match simple_type infer_prod with
       | Fun(Product [TypeVar a; TypeVar b], UnitType) -> a <> b
       | _ -> false));
 ]
 
-let type_test_suite = "all tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests]
-let _ = run_test_tt_main type_test_suite
+let type_test_suite = "type tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests]
 
+let fact_5 = (TLetRec(Name "f",TypeVar (Name "c"),fact',TBase(TApplication(TVar(Name "f"), TInt 5))))
+let app_prod = (TBase (TApplication(quick_strip_tsugar infer_prod, TProd[TInt 5; TBool false])))
+
+(* fails because substitution not implemented for products yet *)
+let run_prog_tests = "test suite that uses main to run some test programs" >:::[
+  "fact_5" >:: (fun _ -> assert_equal (Int 120) (run_prog fact_5));
+  "app_prod" >:: (fun _ -> assert_equal Unit (run_prog app_prod));
+]
+
+let end_to_end_tests = "end-to-end tests" >::: [run_prog_tests]
+
+let test_suite = "test suite" >::: [type_test_suite; end_to_end_tests]
+let _ = run_test_tt_main test_suite
