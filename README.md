@@ -14,6 +14,7 @@ In this code snippet I define the type of lists, write the `map` function for li
 ```evcolang
 newtype list 'a = Nil unit | Cons ('a * (list 'a)) in
 
+{-- map f lst gives back the list that is the result of applying f to each element of lst --}
 let rec map f lst =
   match lst with
   | Nil -> lambda x . Nil
@@ -21,6 +22,7 @@ let rec map f lst =
     Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
 in
 
+{-- ints_up_to n is the list of integers 0 up to n; fails if n < 0 --}
 let ints_up_to n =
   let rec helper k n =
     if k = n + 1 then Nil
@@ -29,12 +31,15 @@ let ints_up_to n =
   helper 0 n
 in
 
-let rec print_list lst =
-  match lst with
-  | Nil -> lambda x . ()
-  | Cons -> lambda x .
-    let a = print (proj 2 0 x) in
-    print_list (proj 2 1 x)
-in
-print_list (map (lambda x . x * x) (ints_up_to 10))
+{-- prints every element in the list lst --}
+let rec print_list lst =                                                                                                                                                                                   
+  match lst with                                                                                                                                                                                           
+  | Nil -> lambda x . ()                                                                                                                                                                                   
+  | Cons -> lambda x .                                                                                                                                                                                     
+    let a = print (proj 2 0 x) in                                                                                                                                                                          
+    print_list (proj 2 1 x)                                                                                                                                                                                
+in                                                                                                                                                                                                         
+                                                                                                                                                                                                           
+{-- print the squares of the integers 0 through 10 --}                                                                                                                                                     
+print_list (map (lambda x . x * x) (ints_up_to 10)) 
 ```
