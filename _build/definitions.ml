@@ -255,7 +255,7 @@ let rec string_of_type = function
   | h::[] -> Printf.sprintf "unary product %s" h
   | h::t -> h ^ (fold_left (fun acc x -> acc ^ " * " ^ x) "" t)
   )
-| TypeVar v -> Printf.sprintf "%s" (string_of_var v)
+| TypeVar v -> Printf.sprintf "tvar %s" (string_of_var v)
 
 (** [known_classes] is an association list, if [(a,[c1,c2,c3])] is in the list this means that we know [a] is in the type classes [c1,c2,c3]. *)
 type known_classes = (var_name * class_constraints) list
@@ -373,6 +373,10 @@ let (>>=) (init_state:('a,'s) state) (transform:'a -> ('b,'s) state) =
   transform first_val first_state
   )
 let (let*) x f = x >>= f
+let state s = (s,s)
+(* allows one to map stateful computations over a list; state is passed right to left *)
+let state_fmap f lst =
+  fold_right (fun x acc -> let* r = f x in let* acc' = acc in return(r::acc')) lst (return [])
 
 let init_name = Sub 0
 let pull_name = function

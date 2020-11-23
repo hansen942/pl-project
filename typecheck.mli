@@ -1,12 +1,4 @@
 open Definitions
-(** the [either] monad allows us to express failure in a principled way*)
-type ('a,'b) either = Left of 'a | Right of 'b
-
-val return : 'a -> ('b,'a) either
-
-val (>>=) : ('a,'b) either -> ('b -> ('a,'c) either) -> ('a,'c) either
-
-val (let*) : ('a,'b) either -> ('b -> ('a,'c) either) -> ('a,'c) either
 
 (** [info] should be line and column info *)
 type info = int * int
@@ -23,3 +15,5 @@ type tconstraint =
 type constraints = tconstraint list
 
 val string_of_constraints : constraints -> string
+
+val strip : typed_expr -> sugar 

@@ -19,7 +19,7 @@ let simple_type tsugar = fst (quick_get_type tsugar)
 let simple_type_w_start e start = match (typecheck e start) with x,_,_ -> fst x
 let show_type_w_start tsugar start = print_endline (string_of_class_constrained_expr_type (match (typecheck tsugar start) with x,_,_ -> x))
 
-let int_id = fst(tsug_from_string "lambda x : int . x") 
+let int_id = TLambda(TVar(Name"x"), Name"x",Integer) 
 let just_int = (TInt 0)
 let just_bool = (TBool true)
 let just_unit = TUnit
@@ -66,11 +66,22 @@ let fact' =
 let fact,fact_start = tsug_from_string "let rec fact = lambda x . if x = 0 then 1 else x * (fact (x + (-1))) in fact"
 (* I was concerned that f would not get assigned forall a. a -> a but rather get forall a. a *)
 let subtle,subtle_start = tsug_from_string "let rec f = lambda x . x in f"
+let fib,fib_start = tsug_from_string 
+"let fib n =
+  let rec fib_help a b n =
+    if n = 0 then a else
+    if n = 1 then b else
+    fib_help b (a+b) (n+(-1))
+  in fib_help 0 1 n
+in
+fib"
 
 let let_rec_tests = "test suite with let rec expressions" >::: [
   "fact" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type_w_start fact fact_start));
   "subtle" >:: (fun _ -> assert_equal true (match (simple_type_w_start subtle subtle_start) with Fun(TypeVar a, TypeVar b) -> a = b | _ -> false));
+  "fib" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type_w_start fib fib_start));
 ]
+
 let infer_prod,infer_prod_start = tsug_from_string "lambda x . print (proj 2 0 x)"
 (* this test shows our inference constrains to the specified type *)
 let annotated,annotated_start = tsug_from_string "let rec f : int -> int = lambda x . x in f"
@@ -81,8 +92,22 @@ let infer_tests = "test suite for type inference" >::: [
       | Fun(Product [TypeVar a; TypeVar b], UnitType) -> a <> b
       | _ -> false));
 ]
+let simple_sum,simple_sum_start = tsug_from_string 
+"newtype option 'a = None unit | Some 'a in
+match Some 103 with
+| Some -> lambda x . x
+| None -> lambda x . 0"
+let first_list,first_list_start = tsug_from_string
+"newtype list 'a = Nil unit | Cons ('a * (list 'a)) in
+let first_list = Cons (1, Cons(2, Nil)) in
+first_list"
 
-let type_test_suite = "type tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests]
+let sum_tests = "test suite for sum types" >::: [
+  "simple_sum" >:: (fun _ -> assert_equal Integer (simple_type_w_start simple_sum simple_sum_start));
+  "first_list" >:: (fun _ -> assert_equal (SumType("list",[Integer])) (simple_type_w_start first_list first_list_start));
+]
+
+let type_test_suite = "type tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests;sum_tests]
 
 let fact_5,fact_5_start = tsug_from_string "let rec fact x = if x = 0 then 1 else x * (fact (x + (-1))) in fact 5"
 let app_prod = ( (TApplication( infer_prod, TProd[TInt 5; TBool false])))

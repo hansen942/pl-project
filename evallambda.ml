@@ -1,23 +1,6 @@
 open Definitions
 open List
 
-type ('a,'s) state = 's -> ('a * 's)
-let return x = fun s -> (x,s)
-(* this is standard bind *) 
-let (>>=) (init_state:('a,'s) state) (transform:'a -> ('b,'s) state) =
-  (fun old_state ->
-  let first_val, first_state = init_state old_state in
-  transform first_val first_state
-  )
-(* use this if you want to throw away first computations result *)
-let (-->) (init_state:('a,'s) state) (transform: ('b,'s) state) =
-  (fun old_state ->
-  let first_val, first_state = init_state old_state in
-  transform first_state
-  )
-
-(** [let*] gives us some noice syntax similar to [do] notation in Haskell*)
-let (let*) x f = x >>= f
 
 type eval_state = var_name
 
@@ -73,9 +56,16 @@ let rec sub e e_x x : (expr, eval_state) state =
   | Unit -> return Unit
   | Print e -> let* e' = subin e in return (Print e')
   | Prod elist ->
-    let* elist' = fold_right (fun x acc -> let* x' = subin x in let*acc' = acc in return(x'::acc')) elist (return []) in
-    return (Prod elist')
+    let* new_elist = state_fmap subin elist in
+    return (Prod new_elist) 
   | Proj(e,n) -> let* e' = subin e in return(Proj(e',n))
+  | Match(e,cases) ->
+    let* e' = subin e in
+    let* cases' = state_fmap (fun (case_name,case_handler) -> let* new_handler = subin case_handler in return (case_name,new_handler)) cases in
+    return(Match(e',cases'))
+  | Sum(cons,e) ->
+    let* e' = subin e in
+    return(Sum(cons,e'))
 
 and smallstep e : (expr, eval_state) state =
 match e with
@@ -110,9 +100,9 @@ match e with
 | Match(e,matches) ->(
   match e with
   | Sum (uname,e) ->
-    match assoc_opt uname matches with
+    (match assoc_opt uname matches with
     | None -> failwith (Printf.sprintf "match failed, no case for %s" uname)
-    | Some f -> return (Application(f,e))
+    | Some f -> return (Application(f,e)))
   | _ -> failwith (Printf.sprintf "cannot match on %s, it is not a sum type" (string_of_expr e))
   )
 | Proj(e,n) ->(
@@ -141,11 +131,3 @@ and eval' e s =
   let e', s' = smallstep e s in eval' e' s'
 
 let eval e s : expr = eval' e s 
-
-(* This small test case checks sub *)
-(*
-let test_sub_e = Lambda (Var (Name "y"), Name "x")
-let _ = Printf.printf "%s {x / y} = %s" (string_of_expr test_sub_e) (string_of_expr (fst (sub test_sub_e (Var (Name "x")) (Name "y") init_name))); print_newline ()
-*)
-
-

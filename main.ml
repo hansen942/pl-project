@@ -9,10 +9,13 @@ let nocheck = ref false
 
 (** [run_prog'] first typechecks its input, then evaluates it*)
 let run_prog' tsugar init_name =
+  if not (!nocheck) then 
   let t,e,fresh = typecheck tsugar init_name in
-  if !nocheck then () else
   print_endline (string_of_class_constrained_expr_type t);
   eval (desugar e) fresh
+  else
+  let e = strip tsugar in
+  eval (desugar e) init_name 
 
 let options = [
   "-nocheck", Arg.Unit (fun _ -> nocheck := true), "Disable type checker"
