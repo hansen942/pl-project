@@ -32,12 +32,7 @@ let ints_up_to n =
 in
 
 {-- prints every element in the list lst --}
-let rec print_list lst =
-  match lst with
-  | Nil -> lambda x . ()
-  | Cons -> lambda x .
-    let a = print (proj 2 0 x) in
-    print_list (proj 2 1 x)
+let rec print_list lst = map print lst
 in
 
 {-- print the squares of the integers 0 through 10 --}
