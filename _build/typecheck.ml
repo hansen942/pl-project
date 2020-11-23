@@ -565,7 +565,9 @@ let tcheck expr name : class_constrained_expr_type * var_name =
 
 
 let put_in_base_defs expr =
-  NewSum("option",["'a"],[("None",UnitType);("Some",TypeVar(Name("'a")))],expr)
+  NewSum("option",["'a"],[("None",UnitType);("Some",TypeVar(Name("'a")))],
+  TLet(Name "print",TLambda(TPrint(TVar(Name"x")),Name"x",TypeVar(Sub(-1))),expr))
 
 let typecheck expr init_name =
-  let mtype,fresh= tcheck (put_in_base_defs expr) init_name in (mtype, strip expr, fresh)
+  let expr' = put_in_base_defs expr in
+  let mtype,fresh= tcheck expr' init_name in (mtype, strip expr', fresh)
