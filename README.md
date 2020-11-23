@@ -4,6 +4,37 @@ Some other cool features I am thinking of adding include Haskell-style functors 
 ## Status
 I began by implementing an evaluator for the applied lambda calculus with integers and booleans.
 Then I made it simply typed and added recursive functions.
-Recently, I implemented prenex polymorphism and type inference as well as type classes, and have begun work to add product and sum types and recursive types.
-Hopefully I will get around to adding a Lexer and Parser at some point.
-Currently you must manually construct the AST of the program you wish to run and then use the eval_prog function in main.ml to both type check and evaluate it.
+Then I implemented prenex polymorphism type inference and type classes (currently the only type class is the `printable` class of types that can be printed).
+Next, I built the lexer and parser.
+Recently I added product types and (recursive) sum types.
+
+## Example Code
+In this code snippet I define the type of lists, write the `map` function for lists, then use this to print out the squares of the integers 0 through 10.
+
+```evcolang
+newtype list 'a = Nil unit | Cons ('a * (list 'a)) in
+
+let rec map f lst =
+  match lst with
+  | Nil -> lambda x . Nil
+  | Cons -> lambda pair .
+    Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
+in
+
+let ints_up_to n =
+  let rec helper k n =
+    if k = n + 1 then Nil
+    else Cons(k,helper (k+1) n)
+  in
+  helper 0 n
+in
+
+let rec print_list lst =
+  match lst with
+  | Nil -> lambda x . ()
+  | Cons -> lambda x .
+    let a = print (proj 2 0 x) in
+    print_list (proj 2 1 x)
+in
+print_list (map (lambda x . x * x) (ints_up_to 10))
+```
