@@ -90,8 +90,7 @@ let infer_tests = "test suite for type inference" >::: [
       | _ -> false));
 ]
 let simple_sum,simple_sum_start = tsug_from_string 
-"newtype option 'a = None unit | Some 'a in
-match Some 103 with
+"match Some 103 with
 | Some -> lambda x . x
 | None -> lambda x . 0"
 let first_list,first_list_start = tsug_from_string
