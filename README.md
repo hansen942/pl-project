@@ -32,14 +32,14 @@ let ints_up_to n =
 in
 
 {-- prints every element in the list lst --}
-let rec print_list lst =                                                                                                                                                                                   
-  match lst with                                                                                                                                                                                           
-  | Nil -> lambda x . ()                                                                                                                                                                                   
-  | Cons -> lambda x .                                                                                                                                                                                     
-    let a = print (proj 2 0 x) in                                                                                                                                                                          
-    print_list (proj 2 1 x)                                                                                                                                                                                
-in                                                                                                                                                                                                         
-                                                                                                                                                                                                           
-{-- print the squares of the integers 0 through 10 --}                                                                                                                                                     
-print_list (map (lambda x . x * x) (ints_up_to 10)) 
+let rec print_list lst =
+  match lst with
+  | Nil -> lambda x . ()
+  | Cons -> lambda x .
+    let a = print (proj 2 0 x) in
+    print_list (proj 2 1 x)
+in
+
+{-- print the squares of the integers 0 through 10 --}
+print_list (map (lambda x . x * x) (ints_up_to 10))
 ```
