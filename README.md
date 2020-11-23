@@ -43,3 +43,53 @@ in
 {-- print the squares of the integers 0 through 10 --}
 print_list (map (lambda x . x * x) (ints_up_to 10))
 ```
+
+Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo remainders have been added and return option types (there are no exceptions in the language).
+
+```
+{-- this will compute the chinese remainder theorem map --}
+
+let rec gcd_w_proof n m =
+  if m = 0 then
+  {-- guarantee that we give positive gcd --}
+  if n > 0 then (n,1,0)
+  else ((-n),(-1),0)
+  else
+  let x = n / m in
+  match x with Some ->
+    lambda x .
+    let q = proj 2 0 x in
+    let r = proj 2 1 x in
+    let rec_result = gcd_w_proof m r in
+    let g = proj 3 0 rec_result in
+    let s = proj 3 1 rec_result in
+    let t = proj 3 2 rec_result in
+    (g,t,s + (-(t*q)))
+in
+
+{-- compute basis for map Z_mn -> Z_m * Z_n--}
+let basis n m =
+  if (m = 0) or (n = 0) then None () else
+  let gcd_res = gcd_w_proof n m in
+  if (proj 3 0 gcd_res) = 1 then
+  Some (
+    match (1 + ((-(proj 3 2 gcd_res))*m)) % (m * n) with
+    Some -> lambda y : int .
+      match (1 + ((-(proj 3 1 gcd_res))*n)) % (m * n) with
+      Some -> lambda x : int .
+        (x,y)
+  )
+  else None ()
+in
+
+let chinese_remainder n p m q =
+  let pqbasis = basis p q in
+  match pqbasis with
+  | None -> lambda x . None
+  | Some -> lambda x .
+  (((proj 2 0 x) * n) + ((proj 2 1 x) * m)) % (p * q)
+in
+
+match chinese_remainder 2 23 1 5 with
+Some -> lambda x . print x
+```
