@@ -15,12 +15,9 @@ let rec strip : typed_expr -> sugar = function
 | TInt n -> SInt n
 | TBool b -> SBool b
 | TVar v -> SVar v
-| TPlus (e1,e2) -> SPlus (strip e1, strip e2)
-| TTimes (e1,e2) -> STimes (strip e1, strip e2)
 | TLambda (e1,v,tv) -> SLambda (strip e1, v)
 | TApplication (e1,e2) -> SApplication (strip e1, strip e2)
 | TIf (e1,e2,e3) -> SIf (strip e1, strip e2, strip e3)
-| TEq (e1,e2) -> SEq (strip e1, strip e2) 
 | TUnit -> SUnit
 | TPrint e -> SPrint (strip e)
 | TSum (name,e) -> SSum(name,strip e)
@@ -28,6 +25,8 @@ let rec strip : typed_expr -> sugar = function
 | TMatch (e,cases) -> SMatch (strip e, map (fun (c,e) -> (c,strip e)) cases)
 | TProj (e,n,l) -> SProj (strip e, n)
 | NewSum (name, targs, cons, cont) -> strip cont
+| TNeg e -> SNeg (strip e)
+| TBinop (e1,op,e2) -> SBinop (strip e1,op,strip e2)
 (* NewSums are only for typechecking so we strip them out*)
 
 (**[venv] is the type of the variable type environment.
@@ -238,6 +237,19 @@ let gen_new_tvars_and_sub t known fresh_in : (class_constrained_expr_type * (var
 let constrain_monad_gen_tvars_and_sub t known (constraints,fresh_in) = 
   let result,(fresh_out,sub_map,new_known) = gen_new_tvars' t (fresh_in,[],known) in (((result,new_known),sub_map),(constraints,fresh_out))
 
+(* given binop gives back first arg type, second arg type, output type *)
+let expected_type op =
+match op with
+| Plus -> (Integer,Integer,Integer)
+| Times -> (Integer,Integer,Integer)
+| Subtract -> (Integer,Integer,Integer)
+| Mod -> (Integer,Integer,SumType("option",[Integer]))
+| L -> (Integer,Integer,Boolean)
+| G -> (Integer,Integer,Boolean)
+| And -> (Boolean,Boolean,Boolean)
+| Or -> (Boolean,Boolean,Boolean)
+| Div -> (Integer,Integer,SumType("option",[Product [Integer;Integer]]))
+| _ -> failwith (Printf.sprintf "expected_type does not work on binop %s" (string_of_binop op))
 
 (* return e2, a venv', and known_classes'
    where each instance of v is changed to a new variable name,
@@ -263,18 +275,6 @@ let rec instance_sub v t known_classes e2  =
     return (TLetRec (v',tv',e1',e2'), combine_maps venv1 venv2, combine_maps known1 known2)
   | TInt _ -> return (e2,[],[])
   | TBool _ -> return (e2,[],[])
-  | TPlus (e1,e2) ->
-  let* e1',venv1,known1 = quick_sub e1 in
-  let* e2',venv2,known2 = quick_sub e2 in
-  return (TPlus (e1,e2),combine_maps venv1 venv2, combine_maps known1 known2)
-  | TTimes (e1,e2) ->
-  let* e1',venv1,known1 = quick_sub e1 in
-  let* e2',venv2,known2 = quick_sub e2 in
-  return (TTimes (e1,e2),combine_maps venv1 venv2, combine_maps known1 known2)
-  | TEq (e1,e2) ->
-  let* e1',venv1,known1 = quick_sub e1 in
-  let* e2',venv2,known2 = quick_sub e2 in
-  return (TEq (e1,e2),combine_maps venv1 venv2, combine_maps known1 known2)
   | TLambda (e,arg,targ) ->
     if arg = v then return (e2,[],[]) else
     let* e',venv',known' = quick_sub e in
@@ -322,6 +322,13 @@ let rec instance_sub v t known_classes e2  =
   | NewSum (tname,targs,tdef,cont) ->
     let* cont',venv',known' = quick_sub cont in
     return (NewSum(tname,targs,tdef,cont'),venv',known') 
+  | TBinop (e1,op,e2) ->
+    let* e1',v1,k1 = quick_sub e1 in
+    let* e2',v2,k2 = quick_sub e2 in
+    return (TBinop(e1',op,e2'), combine_maps v1 v2, combine_maps k1 k2)
+  | TNeg e ->
+    let* e',v',k' = quick_sub e in
+    return (TNeg e',v',k')
 
 (* gives all type names *)
 let user_types utenv = map (fun (x,_,_) -> x) utenv
@@ -353,14 +360,22 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
 | TVar v -> (match assoc_opt v venv with
              | Some t -> return t
 	     | None -> failwith (undeclared_error v))
-| TPlus (e1,e2) ->
+| TBinop (e1,op,e2) -> (
   let* t1 = tcheck' venv known_classes utenv e1 in
   let* t2 = tcheck' venv known_classes utenv e2 in
-  constrain t1 Integer () >>= constrain t2 Integer >>= ignore(return Integer)
-| TTimes (e1,e2) ->
-  let* t1 = tcheck' venv known_classes utenv e1 in
-  let* t2 = tcheck' venv known_classes utenv e2 in
-  constrain t1 Integer () >>= constrain t2 Integer >>= ignore(return Integer)
+  match op with
+  | Eq ->
+    constrain t1 t2 () >>= ignore(return Boolean)
+  | _ ->
+    let expected1, expected2, out = expected_type op in
+    constrain t1 expected1 () >>=
+    constrain t2 expected2    >>=
+    ignore(return out)
+)
+| TNeg e -> 
+  let* t = tcheck' venv known_classes utenv e in
+  constrain t Integer () >>=
+  ignore(return Integer)
 | TLambda (e,v,tv) ->
   let venv' = (v,tv)::venv in
   let* tbody = tcheck' venv' known_classes utenv e in
@@ -375,10 +390,6 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
   let* t2 = tcheck' venv known_classes utenv e2 in
   let* t3 = tcheck' venv known_classes utenv e3 in
   constrain t1 Boolean () >>= constrain t2 t3 >>= ignore (return t2)
-| TEq (e1,e2) ->
-  let* t1 = tcheck' venv known_classes utenv e1 in
-  let* t2 = tcheck' venv known_classes utenv e2 in
-  constrain t1 t2 () >>= ignore(return Boolean)
 | TUnit -> return UnitType
 | TPrint e ->
   let* t = tcheck' venv known_classes utenv e in
@@ -552,5 +563,9 @@ let tcheck expr name : class_constrained_expr_type * var_name =
     match tcheck_compact [] expr name [] [] with
     | (t,fresh_out,class_out) -> ((t,class_out),fresh_out)
 
-let typecheck sugar_e init_name =
-  let mtype,fresh= tcheck sugar_e init_name in (mtype, strip sugar_e, fresh)
+
+let put_in_base_defs expr =
+  NewSum("option",["'a"],[("None",UnitType);("Some",TypeVar(Name("'a")))],expr)
+
+let typecheck expr init_name =
+  let mtype,fresh= tcheck (put_in_base_defs expr) init_name in (mtype, strip expr, fresh)

@@ -19,12 +19,12 @@ let simple_type tsugar = fst (quick_get_type tsugar)
 let simple_type_w_start e start = match (typecheck e start) with x,_,_ -> fst x
 let show_type_w_start tsugar start = print_endline (string_of_class_constrained_expr_type (match (typecheck tsugar start) with x,_,_ -> x))
 
-let int_id = TLambda(TVar(Name"x"), Name"x",Integer) 
-let just_int = (TInt 0)
-let just_bool = (TBool true)
-let just_unit = TUnit
-let int_sum = (TPlus(TInt 2, TInt 3))
-let if_else = (TIf(TBool true, TInt 0, TInt 1))
+let int_id = fst(tsug_from_string "lambda x : int . x") 
+let just_int = fst(tsug_from_string "0") 
+let just_bool = fst(tsug_from_string "false")
+let just_unit = fst(tsug_from_string "()")
+let int_sum = fst(tsug_from_string "2 + 3")
+let if_else = fst(tsug_from_string "if true then 0 else 1")
 
 let simple_tests = "test suite without lets or polymorphism" >::: [
   "int_id" >:: (fun _ -> assert_equal (Fun(Integer,Integer)) (simple_type int_id));
@@ -60,9 +60,6 @@ let let_tests = "test suite with let expressions" >::: [
    
 ]
 
-let fact' =
-  let n = Name "n" in
-   (TLambda (TIf(TEq(TVar n,TInt 0),TInt 1, TTimes(TVar n,TApplication (TVar (Name "f"), TPlus (TVar n,TInt (-1))))), n, TypeVar (Name "a")))
 let fact,fact_start = tsug_from_string "let rec fact = lambda x . if x = 0 then 1 else x * (fact (x + (-1))) in fact"
 (* I was concerned that f would not get assigned forall a. a -> a but rather get forall a. a *)
 let subtle,subtle_start = tsug_from_string "let rec f = lambda x . x in f"
@@ -117,7 +114,9 @@ let run_prog_tests = "test suite that uses main to run some test programs" >:::[
   "app_prod" >:: (fun _ -> assert_equal Unit (run_prog app_prod infer_prod_start));
 ]
 
+
 let end_to_end_tests = "end-to-end tests" >::: [run_prog_tests]
 
 let test_suite = "test suite" >::: [type_test_suite; end_to_end_tests]
 let _ = run_test_tt_main test_suite
+

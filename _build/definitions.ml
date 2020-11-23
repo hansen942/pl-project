@@ -9,23 +9,34 @@ type var_name =
 | Sub of int
 | Name of user_var_name 
 
+type binop =
+| Plus
+| Times
+| Subtract
+| Mod
+| L
+| G
+| And
+| Or
+| Eq
+| Div
+
 (** [expr] is the type of our untyped expressions. It is essentially the applied lambda calculus. *)
-and expr =
+type expr =
 | Int of int
 | Var of var_name
 | Lambda of expr * var_name
 | Application of expr * expr
 | If of expr * expr * expr
 | Bool of bool
-| Plus of expr * expr
-| Times of expr * expr
-| Eq of expr * expr
 | Unit
 | Print of expr
 | Sum of user_var_name * expr (* var_name is the constructor name used *)
 | Prod of expr list
 | Match of expr * ((user_var_name * expr) list)
 | Proj of expr * int
+| Neg of expr
+| Binop of expr * binop * expr
 (*| Lazy of expr ref*)
 
 (*module Compare_VName : Map.OrderedType = struct
@@ -47,7 +58,6 @@ type sugar =
 | SApplication of sugar * sugar
 | SIf of sugar * sugar * sugar
 | SBool of bool
-| SPlus of sugar * sugar
 | STimes of sugar * sugar
 | SEq of sugar * sugar
 | SUnit
@@ -56,6 +66,8 @@ type sugar =
 | SProd of sugar list
 | SMatch of sugar * ((user_var_name * sugar) list)
 | SProj of sugar * int
+| SNeg of sugar 
+| SBinop of sugar * binop * sugar
 
 (** [z] is the Z-combinator *)
 let z =
@@ -73,15 +85,14 @@ let rec desugar : sugar -> expr = function
 | SApplication(e1,e2) -> Application(desugar e1,desugar e2)
 | SIf(e1,e2,e3) -> If(desugar e1,desugar e2,desugar e3)
 | SBool b -> Bool b
-| SPlus(e1,e2) -> Plus(desugar e1,desugar e2)
-| STimes(e1,e2) -> Times(desugar e1,desugar e2)
-| SEq(e1,e2) -> Eq(desugar e1,desugar e2)
 | SUnit -> Unit
 | SPrint e -> Print (desugar e)
 | SSum(n,e) -> Sum(n,desugar e) 
 | SProd elist -> Prod(map desugar elist)
 | SMatch (e,cases) -> Match(desugar e, map (fun (x,y) -> (x,desugar y)) cases)
 | SProj(e,n) -> Proj(desugar e,n)
+| SNeg e -> Neg (desugar e)
+| SBinop (e1,binop,e2) -> Binop(desugar e1,binop, desugar e2)
 
 
 let rec is_val = function
@@ -111,9 +122,6 @@ let rec fv : expr -> var_name list = function
 | Application (e1,e2) -> naive_list_union (fv e1) (fv e2)
 | If (e1,e2,e3) -> naive_list_union (fv e1) (naive_list_union (fv e2) (fv e3))
 | Bool _ -> []
-| Plus (e1,e2) -> naive_list_union (fv e1) (fv e2)
-| Times (e1,e2) -> naive_list_union (fv e1) (fv e2)
-| Eq (e1,e2) -> naive_list_union (fv e1) (fv e2)
 | Unit -> []
 | Print e -> fv e
 | Sum (name,e) -> fv e
@@ -125,6 +133,8 @@ let rec fv : expr -> var_name list = function
   | Prod elist -> (match nth_opt elist n with None -> [] | Some e -> fv e )
   | _ -> []
   )
+| Neg e -> fv e
+| Binop (e1,binop,e2) -> naive_list_union (fv e1) (fv e2)
 
 
 let string_of_var v : string =
@@ -132,13 +142,22 @@ match v with
 | Sub x -> Printf.sprintf "ⓥ %n" x
 | Name v -> v
 
+let string_of_binop : binop -> string = function
+| Eq -> "="
+| Subtract -> "-"
+| Plus -> "+"
+| Mod -> "%"
+| Times -> "*"
+| L -> "<"
+| G -> ">"
+| And -> "and"
+| Or -> "or"
+| Div -> "/"
+
 let rec string_of_expr : expr -> string = function
 | Int n -> string_of_int n
 | Var v -> string_of_var v
 | Bool b -> string_of_bool b
-| Eq (e1,e2) -> Printf.sprintf "%s = %s" (string_of_expr e1) (string_of_expr e2)
-| Plus (e1,e2) -> Printf.sprintf "%s + %s" (string_of_expr e1) (string_of_expr e2)
-| Times (e1,e2) -> Printf.sprintf "%s * (%s)" (string_of_expr e1) (string_of_expr e2)
 | Lambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_expr e) 
 | Application (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_expr e1) (string_of_expr e2)
 | If (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_expr e1) (string_of_expr e2) (string_of_expr e3)
@@ -155,7 +174,9 @@ let rec string_of_expr : expr -> string = function
   let body = fold_left (fun acc x -> acc ^ "| " ^ (fst x) ^ " -> " ^ (string_of_expr (snd x))) "" cases in
   Printf.sprintf "match %s with %s" (string_of_expr e) body
 | Proj (e,n) -> Printf.sprintf "%s[%s]" (string_of_expr e) (string_of_int n)
- 
+| Neg e -> Printf.sprintf "(-%s)" (string_of_expr e) 
+| Binop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_expr e1) (string_of_binop binop) (string_of_expr e2)
+
 let rec string_of_sugar : sugar -> string = function
 | Let (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
 | LetRec (v,e1,e2) -> Printf.sprintf "let rec %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
@@ -163,9 +184,6 @@ let rec string_of_sugar : sugar -> string = function
 | SInt n -> string_of_int n
 | SVar v -> string_of_var v
 | SBool b -> string_of_bool b
-| SEq (e1,e2) -> Printf.sprintf "%s = %s" (string_of_sugar e1) (string_of_sugar e2)
-| SPlus (e1,e2) -> Printf.sprintf "%s + %s" (string_of_sugar e1) (string_of_sugar e2)
-| STimes (e1,e2) -> Printf.sprintf "%s * (%s)" (string_of_sugar e1) (string_of_sugar e2)
 | SLambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_sugar e) 
 | SApplication (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_sugar e1) (string_of_sugar e2)
 | SIf (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_sugar e1) (string_of_sugar e2) (string_of_sugar e3)
@@ -182,8 +200,11 @@ let rec string_of_sugar : sugar -> string = function
   let body = fold_left (fun acc x -> acc ^ "| " ^ (fst x) ^ " -> " ^ (string_of_sugar (snd x))) "" cases in
   Printf.sprintf "match %s with %s" (string_of_sugar e) body
 | SProj (e,n) -> Printf.sprintf "%s[%s]" (string_of_sugar e) (string_of_int n)
+| SNeg e -> Printf.sprintf "(-%s)" (string_of_sugar e) 
+| SBinop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_sugar e1) (string_of_binop binop) (string_of_sugar e2)
 
 (** [type_class] serves the purpose of telling what generic types can have generic operations done on them *)
+(* TODO: allow way to construct new type classes, and change this type to include user-defined type classes *)
 type type_class =
 | Printable
 
@@ -201,14 +222,6 @@ type expr_type =
 | TypeVar of var_name
 | Product of expr_type list
 | SumType of user_var_name * (expr_type list) (* only put type name and parametric types because will not be known until later. Constructors but into a context *) 
-(*TODO: these extensions*)
-(*
-and user_type =
-| Sum of user_var_name * ((user_var_name * (expr_type list)) list)
-| NamedProd of user_var_name * (expr_type list)
-| Prod of expr_type list
-| User of user_type
-*)
 
 let rec ftv = function
 | Fun (t1,t2) ->
@@ -280,31 +293,26 @@ type typed_expr =
 | TInt of int
 | TBool of bool
 | TVar of var_name
-| TPlus of typed_expr * typed_expr
-| TTimes of typed_expr * typed_expr
 | TLambda of typed_expr * var_name * expr_type
 | TApplication of typed_expr * typed_expr
 | TIf of typed_expr * typed_expr * typed_expr
-| TEq of typed_expr * typed_expr
 | TUnit
 | TPrint of typed_expr
 | TSum of user_var_name * typed_expr (* var_name is the constructor name used *)
 | TProd of typed_expr list
 | TMatch of typed_expr * ((user_var_name * typed_expr) list)
 | TProj of typed_expr * int * int (* index you want, length of tuple you expect *)
-(* for type inference purposes it is important we know the length of the tuple in advance. We would not have this problem if we instead only allowed pairs and wrote n-tuples as nested pairs, but that's just silly. In effect you can think of this as being a dependently typed function whose second argument determines the type, but because these are constants it doesn't require any extra work. Note that the args are printed in the other order*)
-(* allow user to define new types so they can actually use sums *)
+| TNeg of typed_expr
+| TBinop of typed_expr * binop * typed_expr
 | NewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * typed_expr (* new type name, type variables used, constructors by types, next expression *)
 | TLet of var_name * typed_expr * typed_expr
 | TLetRec of var_name * expr_type * typed_expr * typed_expr
+
 
 let rec string_of_typed_expr : typed_expr -> string = function
 | TInt n -> string_of_int n
 | TVar v -> string_of_var v
 | TBool b -> string_of_bool b
-| TEq (e1,e2) -> Printf.sprintf "%s = %s" (string_of_typed_expr e1) (string_of_typed_expr e2)
-| TPlus (e1,e2) -> Printf.sprintf "%s + %s" (string_of_typed_expr e1) (string_of_typed_expr e2)
-| TTimes (e1,e2) -> Printf.sprintf "%s * (%s)" (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TLambda (e,arg,t) -> Printf.sprintf "λ%s : %s.%s" (string_of_var arg) (string_of_type t) (string_of_typed_expr e) 
 | TApplication (e1,e2) -> Printf.sprintf "(%s) (%s)" (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TIf (e1,e2,e3) -> Printf.sprintf "if %s then %s else %s" (string_of_typed_expr e1) (string_of_typed_expr e2) (string_of_typed_expr e3)
@@ -331,6 +339,8 @@ let rec string_of_typed_expr : typed_expr -> string = function
   )
 | TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TNeg e -> Printf.sprintf "(-%s)" (string_of_typed_expr e) 
+| TBinop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_typed_expr e1) (string_of_binop binop) (string_of_typed_expr e2)
 
 (* Note: for type variables you should check the known type class constraints to see if it is declared prinatble before calling this. *)
 let rec printable : expr_type -> bool = function
@@ -338,7 +348,7 @@ let rec printable : expr_type -> bool = function
 | Integer -> true
 | Boolean -> true
 | Fun _ -> false
-| SumType (name,args) -> failwith "unimplemented"
+| SumType (name,args) -> false
 (* we also need to know the actual structure of the sumtype from the context*)
 | Product tlist -> for_all printable tlist
 | TypeVar _ -> false
@@ -348,12 +358,9 @@ type opt_t_expr =
 | OInt of int
 | OBool of bool
 | OVar of var_name
-| OPlus of opt_t_expr * opt_t_expr 
-| OTimes of opt_t_expr * opt_t_expr
 | OLambda of opt_t_expr * var_name * (expr_type option)
 | OApplication of opt_t_expr * opt_t_expr
 | OIf of opt_t_expr * opt_t_expr * opt_t_expr
-| OEq of opt_t_expr * opt_t_expr
 | OUnit
 | OPrint of opt_t_expr
 | OSum of user_var_name * opt_t_expr
@@ -363,6 +370,8 @@ type opt_t_expr =
 | ONewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * opt_t_expr
 | OLet of var_name * opt_t_expr * opt_t_expr 
 | OLetRec of var_name * (expr_type option) * opt_t_expr * opt_t_expr 
+| ONeg of opt_t_expr
+| OBinop of opt_t_expr * binop * opt_t_expr
 
 type ('a,'s) state = 's -> ('a * 's)
 let return x = fun s -> (x,s)
@@ -389,14 +398,6 @@ let rec annotate_opt_t_expr oexpr =
   | OInt n -> return(TInt n)
   | OBool b -> return(TBool b)
   | OVar v -> return(TVar v)
-  | OPlus(e1,e2) ->
-    let* e1' = f e1 in
-    let* e2' = f e2 in
-    return(TPlus(e1',e2'))
-  | OTimes(e1,e2) ->
-    let* e1' = f e1 in
-    let* e2' = f e2 in
-    return(TTimes(e1',e2'))
   | OLambda(e1,v,t_opt) ->
     let* e1' = f e1 in
     let* t =
@@ -414,10 +415,6 @@ let rec annotate_opt_t_expr oexpr =
     let* e2' = f e2 in
     let* e3' = f e3 in
     return(TIf(e1',e2',e3'))
-  | OEq(e1,e2) ->
-    let* e1' = f e1 in
-    let* e2' = f e2 in
-    return(TEq(e1',e2'))
   | OPrint(e) ->
     let* e' = f e in
     return(TPrint(e'))
@@ -449,3 +446,5 @@ let rec annotate_opt_t_expr oexpr =
     return(TLetRec(v,t,e1',e2'))
   | ONewSum (w,x,y,z) -> let* z' = f z in return(NewSum (w,x,y,z')) 
   | OUnit -> return TUnit
+  | ONeg e -> let* e' = f e in return (TNeg e')
+  | OBinop (e1,binop,e2) -> let* e1' = f e1 in let* e2' = f e2 in return(TBinop (e1',binop,e2'))
