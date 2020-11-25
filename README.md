@@ -44,7 +44,7 @@ map print (map square (ints_up_to 10))
 
 ```
 
-Asking for the type of `map print` will give back `∀ printable ⓥ 9.list tvar ⓥ 9 →  list unit` which says that it is a function that takes in lists of printable elements and returns a list of units.
+Asking for the type of `map print` will give back `∀ printable ⓥ 9.list tvar ⓥ 9 →  list unit` which says that it is a function that takes in lists of printable elements and returns a list of units. I may clean up the way it prints out types so that instead of saying something like `tvar ⓥ 9` it gives a prettier type name like `'a` or something.
 
 The option type is also automatically included in every file and has the definition
 ```
