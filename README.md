@@ -93,7 +93,9 @@ let basis n m =
   else None ()
 in
 
-{-- If p is relatively prime to q then this returns Some k where k is the unique integer between 0 and pq - 1 that is equivalent to n mod p and m mod q--}
+{-- If p is relatively prime to q then this returns Some k where k is the unique integer between 0 and pq - 1
+    that is equivalent to n mod p and m mod q
+    Otherwise it returns None --}
 let chinese_remainder n p m q =
   let pqbasis = basis p q in
   match pqbasis with
