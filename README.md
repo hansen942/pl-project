@@ -5,9 +5,8 @@ Some other cool features I am thinking of adding include Haskell-style functors 
 The language is based off the applied lambda calculus extended with let statements.
 It also supports user defined algebraic data types, prenex polymorphism type inference, and I am working to add type classes.
 
-Currently the only type class is the type class `printable` of types that can be printed with the built-in print function, but type class inference has soundness issues (this does not lead to crashes, but it will sometimes allow you to print things like functions that typically will not be very readable).
-I am working on removing this bug.
-It is currently not possible for the user to define typeclasses, but if/when I resolve this bug I will add this functionality as well.
+Currently the only typeclass is `printable` of types that can be printed with the built-in print function.
+It is currently not possible for the user to define typeclasses, but I intend to add this functionality as well.
 
 ## Example Code
 
@@ -16,38 +15,36 @@ Lists are defined by the code
 ```
 newtype list 'a = Nil unit | Cons ('a * (list 'a)) in
 ```
-which is included in all files before typechecking.
+which is included in all files before typechecking, and so is the function `map` which is defined by
 
-In this code snippet I write the `map` function for lists, then use this to print out the squares of the integers 0 through 10.
-
-```evcolang
-{-- map f lst gives back the list that is the result of applying f to each element of lst --}
-let rec map f lst =
-  match lst with
-  | Nil -> lambda x . Nil
-  | Cons -> lambda pair .
-    Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
-in
-
-{-- ints_up_to n is the list of integers 0 up to n; fails if n < 0 --}
-let ints_up_to n =
-  let rec helper k n =
-    if k = n + 1 then Nil
-    else Cons(k,helper (k+1) n)
-  in
-  helper 0 n
-in
-
-{-- prints every element in the list lst --}
-let rec print_list lst = map print lst
-in
-
-{-- print the squares of the integers 0 through 10 --}
-print_list (map (lambda x . x * x) (ints_up_to 10))
+```
+{-- return lst with f applied to every entry --}
+let rec map f lst =  
+  match lst with    
+  | Nil -> lambda x . Nil    
+  | Cons -> lambda pair .    
+  Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
 ```
 
-The soundness issue with type classes can be demonstrated here by asking the typechecker what the type of `print_list` is; it will tell you it has the type `forall 'a. list 'a -> list unit` when it should say `forall printable 'a. list 'a -> list unit`. I.e. it will allow you to print lists of items even if these items are not in the `printable` typeclass.
+In this code snippet I print out the squares of the integers 0 through 10.
 
+```evcolang
+let ints_up_to n =
+  if n < 0 then Nil else
+  let rec helper k =
+    if k > n then Nil else
+    Cons(k,helper (k+1))
+  in
+  helper 0
+in
+
+let square x = x * x in
+
+map print (map square (ints_up_to 10))
+
+```
+
+Asking for the type of `map print` will give back `∀ printable ⓥ 9.list tvar ⓥ 9 →  list unit` which says that it is a function that takes in lists of printable elements and returns a list of units.
 
 The option type is also automatically included in every file and has the definition
 ```
