@@ -54,7 +54,7 @@ The option type is also automatically included in every file and has the definit
 newtype option 'a = None unit | Some 'a in
 ```
 
-Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo remainders have been added and return option types (there are no exceptions in the language).
+Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return option types (there are no exceptions in the language).
 
 
 ```
