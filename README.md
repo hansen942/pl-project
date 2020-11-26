@@ -6,7 +6,7 @@ The language is based off the applied lambda calculus extended with let statemen
 It also supports user defined algebraic data types, prenex polymorphism type inference, and I am working to add type classes.
 
 Currently the only typeclass is `printable` of types that can be printed with the built-in print function.
-It is currently not possible for the user to define typeclasses, but I intend to add this functionality as well.
+It is currently not possible for the user to define typeclasses, and after thinking about how this could be accomplished, I have decided that while I intend to add more typeclasses, I probably will not allow users to define typeclasses themselves.
 
 ## Example Code
 
