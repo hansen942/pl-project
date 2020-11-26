@@ -111,3 +111,9 @@ In the case that you give it an input that is not matched, the evaluator will cr
 This is necessary if you ever want to get outside the `option` type.
 For instance, in `gcd_w_proof` we would have to have it return an `option` type if we matched the `None` case, but we already checked if `m = 0` so that we know no crash will occur.
 I am considering modifying this so that you can have it crash with a custom message, but do not intend to add exceptions to the language, i.e. you will not be able to catch an exception, but just change the message that comes out.
+
+## Important Notes
+
+Although an expression like `proj 2 0 x` may look like a function---`proj`---applied to three arguments, `proj` is built-in syntax whose first two arguments must be integer literals that does not support partial application. So an expression like `proj (2+3) 2 x` is not valid, and neither is `let f = proj 2 0 in f x`.
+
+Similarly, none of the binary infix operations allow partial application, so that `let f = (3+) in ...` is not valid either.
