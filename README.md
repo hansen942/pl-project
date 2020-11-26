@@ -21,8 +21,8 @@ which is included in all files before typechecking, and so is the function `map`
 {-- return lst with f applied to every entry --}
 let rec map f lst =  
   match lst with    
-  | Nil -> lambda x . Nil    
-  | Cons -> lambda pair .    
+  | Nil x -> Nil    
+  | Cons pair ->   
   Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
 ```
 
@@ -64,8 +64,9 @@ let rec gcd_w_proof n m =
   else ((-n),(-1),0)
   else
   let x = n / m in
-  match x with Some ->
-    lambda x .
+  match x with
+  {-- None never happens --}
+  Some x ->
     let q = proj 2 0 x in
     let r = proj 2 1 x in
     let rec_result = gcd_w_proof m r in
@@ -75,35 +76,34 @@ let rec gcd_w_proof n m =
     (g,t,s + (-(t*q)))
 in
 
-{-- compute basis for map Z_mn -> Z_m * Z_n--}
+{-- compute basis for map Z_m * Z_n -> Z_mn --}
 let basis n m =
-  if (m = 0) or (n = 0) then None () else
+  if (m = 0) or (n = 0) then None else
   let gcd_res = gcd_w_proof n m in
   if (proj 3 0 gcd_res) = 1 then
   Some (
     match (1 + ((-(proj 3 2 gcd_res))*m)) % (m * n) with
-    Some -> lambda y : int .
+    Some y ->
       match (1 + ((-(proj 3 1 gcd_res))*n)) % (m * n) with
-      Some -> lambda x : int .
+      Some x ->
         (x,y)
   )
-  else None ()
+  else None
 in
 
-{-- If p is relatively prime to q then this returns Some k where k is the unique integer between 0 and pq - 1
-    that is equivalent to n mod p and m mod q
-    Otherwise it returns None --}
+{-- chinese_remainder n p m q is:
+  if p and q are relatively prime: Some k where k is the unique integer between 0 and pq - 1 that is equivlant to n mod p and m mod q
+  otherwise None --}
 let chinese_remainder n p m q =
   let pqbasis = basis p q in
   match pqbasis with
-  | None -> lambda x . None
-  | Some -> lambda x .
+  | None x -> None
+  | Some x ->
   (((proj 2 0 x) * n) + ((proj 2 1 x) * m)) % (p * q)
 in
 
 match chinese_remainder 2 23 1 5 with
-Some -> lambda x . print x
-{-- prints 71 --}
+Some x -> print x
 ```
 
 Despite there being no exceptions, you can see that it is still possible to not match every case in match expressions.
