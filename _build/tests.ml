@@ -46,10 +46,10 @@ let poly_tests = "test suite with polymorphism" >::: [
 ]
 
 
-let fstlet = TLet (Name "x", (TInt 5), (TVar (Name "x")))
-let nested_let = TLet(Name "x",  (TInt 1), TLet (Name "x", (TBool true), (TVar (Name "x"))))
+let fstlet = TLet (Name "x", TypeVar(Name "a") , (TInt 5), (TVar (Name "x")))
+let nested_let = TLet(Name "x", TypeVar(Name "a"), (TInt 1), TLet (Name "x", TypeVar(Name "b"), (TBool true), (TVar (Name "x"))))
 (* this expression is interesting because this requires inference to instantiate type variables distinctly for each isntance *)
-let interesting = TLet(Name "x", id, (TApplication(TVar(Name "x"), TVar(Name "x"))))
+let interesting = TLet(Name "x", TypeVar(Name "c"), id, (TApplication(TVar(Name "x"), TVar(Name "x"))))
 
 let let_tests = "test suite with let expressions" >::: [
   "fstlet" >:: (fun _ -> assert_equal Integer (simple_type fstlet));
@@ -91,11 +91,10 @@ let infer_tests = "test suite for type inference" >::: [
 ]
 let simple_sum,simple_sum_start = tsug_from_string 
 "match Some 103 with
-| Some -> lambda x . x
-| None -> lambda x . 0"
+| Some x -> x
+| None x -> 0"
 let first_list,first_list_start = tsug_from_string
-"newtype list 'a = Nil unit | Cons ('a * (list 'a)) in
-let first_list = Cons (1, Cons(2, Nil)) in
+"let first_list = Cons (1, Cons(2, Nil)) in
 first_list"
 
 let sum_tests = "test suite for sum types" >::: [

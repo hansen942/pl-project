@@ -1,50 +1,50 @@
 ### Starting build.
-# Target: main.ml.depends, tags: { extension:ml, file:main.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules main.ml > main.ml.depends # cached
-# Target: definitions.ml.depends, tags: { extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules definitions.ml > definitions.ml.depends # cached
-# Target: definitions.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o definitions.cmo definitions.ml # cached
-# Target: evallambda.mli.depends, tags: { extension:mli, file:evallambda.mli, ocaml, ocamldep, quiet }
-ocamldep.opt -modules evallambda.mli > evallambda.mli.depends # cached
-# Target: evallambda.cmi, tags: { byte, compile, extension:mli, file:evallambda.mli, interf, ocaml, quiet }
-ocamlc.opt -c -o evallambda.cmi evallambda.mli # cached
-# Target: lexer.mll, tags: { extension:mll, file:lexer.mll, lexer, ocaml, ocamllex, quiet }
+# Target: tests.ml.depends, tags: { package(ounit2), extension:ml, file:tests.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules tests.ml > tests.ml.depends # cached
+# Target: definitions.ml.depends, tags: { package(ounit2), extension:ml, file:definitions.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules definitions.ml > definitions.ml.depends # cached
+# Target: definitions.cmo, tags: { package(ounit2), byte, compile, extension:cmo, extension:ml, file:definitions.cmo, file:definitions.ml, implem, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o definitions.cmo definitions.ml # cached
+# Target: evallambda.mli.depends, tags: { package(ounit2), extension:mli, file:evallambda.mli, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules evallambda.mli > evallambda.mli.depends # cached
+# Target: evallambda.cmi, tags: { package(ounit2), byte, compile, extension:mli, file:evallambda.mli, interf, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o evallambda.cmi evallambda.mli # cached
+# Target: lexer.mll, tags: { package(ounit2), extension:mll, file:lexer.mll, lexer, ocaml, ocamllex, quiet }
 ocamllex.opt -q lexer.mll # cached
-# Target: lexer.ml.depends, tags: { extension:ml, file:lexer.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules lexer.ml > lexer.ml.depends # cached
-# Target: parser.mly, tags: { extension:mly, file:parser.mly, infer, ocaml, ocamlyacc, parser, quiet }
+# Target: lexer.ml.depends, tags: { package(ounit2), extension:ml, file:lexer.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules lexer.ml > lexer.ml.depends # cached
+# Target: parser.mly, tags: { package(ounit2), extension:mly, file:parser.mly, infer, ocaml, ocamlyacc, parser, quiet }
 ocamlyacc parser.mly # cached
-# Target: parser.mli.depends, tags: { extension:mli, file:parser.mli, ocaml, ocamldep, quiet }
-ocamldep.opt -modules parser.mli > parser.mli.depends # cached
-# Target: parser.cmi, tags: { byte, compile, extension:mli, file:parser.mli, interf, ocaml, quiet }
-ocamlc.opt -c -o parser.cmi parser.mli # cached
-# Target: lexer.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:lexer.cmo, file:lexer.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o lexer.cmo lexer.ml # cached
-# Target: typecheck.mli.depends, tags: { extension:mli, file:typecheck.mli, ocaml, ocamldep, quiet }
-ocamldep.opt -modules typecheck.mli > typecheck.mli.depends # cached
-# Target: typecheck.cmi, tags: { byte, compile, extension:mli, file:typecheck.mli, interf, ocaml, quiet }
-ocamlc.opt -c -o typecheck.cmi typecheck.mli # cached
-# Target: main.cmo, tags: { byte, compile, extension:cmo, extension:ml, file:main.cmo, file:main.ml, implem, ocaml, quiet }
-ocamlc.opt -c -o main.cmo main.ml # cached
-# Target: definitions.cmx, tags: { compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o definitions.cmx definitions.ml # cached
-# Target: evallambda.ml.depends, tags: { extension:ml, file:evallambda.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules evallambda.ml > evallambda.ml.depends # cached
-# Target: evallambda.cmx, tags: { compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o evallambda.cmx evallambda.ml # cached
-# Target: parser.ml.depends, tags: { extension:ml, file:parser.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules parser.ml > parser.ml.depends # cached
-# Target: parser.cmx, tags: { compile, extension:cmx, extension:ml, file:parser.cmx, file:parser.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o parser.cmx parser.ml # cached
-# Target: lexer.cmx, tags: { compile, extension:cmx, extension:ml, file:lexer.cmx, file:lexer.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o lexer.cmx lexer.ml # cached
-# Target: typecheck.ml.depends, tags: { extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
-ocamldep.opt -modules typecheck.ml > typecheck.ml.depends # cached
-# Target: typecheck.cmx, tags: { compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o typecheck.cmx typecheck.ml # cached
-# Target: main.cmx, tags: { compile, extension:cmx, extension:ml, file:main.cmx, file:main.ml, implem, native, ocaml, quiet }
-ocamlopt.opt -c -o main.cmx main.ml # cached
-# Target: main.native, tags: { dont_link_with, extension:native, file:main.native, link, native, ocaml, program, quiet }
-ocamlopt.opt definitions.cmx evallambda.cmx parser.cmx lexer.cmx typecheck.cmx main.cmx -o main.native # cached
+# Target: parser.mli.depends, tags: { package(ounit2), extension:mli, file:parser.mli, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules parser.mli > parser.mli.depends # cached
+# Target: parser.cmi, tags: { package(ounit2), byte, compile, extension:mli, file:parser.mli, interf, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o parser.cmi parser.mli # cached
+# Target: lexer.cmo, tags: { package(ounit2), byte, compile, extension:cmo, extension:ml, file:lexer.cmo, file:lexer.ml, implem, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o lexer.cmo lexer.ml # cached
+# Target: typecheck.mli.depends, tags: { package(ounit2), extension:mli, file:typecheck.mli, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules typecheck.mli > typecheck.mli.depends # cached
+# Target: typecheck.cmi, tags: { package(ounit2), byte, compile, extension:mli, file:typecheck.mli, interf, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o typecheck.cmi typecheck.mli # cached
+# Target: tests.cmo, tags: { package(ounit2), byte, compile, extension:cmo, extension:ml, file:tests.cmo, file:tests.ml, implem, ocaml, quiet }
+ocamlfind ocamlc -c -package ounit2 -o tests.cmo tests.ml # cached
+# Target: definitions.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:definitions.cmx, file:definitions.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o definitions.cmx definitions.ml # cached
+# Target: evallambda.ml.depends, tags: { package(ounit2), extension:ml, file:evallambda.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules evallambda.ml > evallambda.ml.depends # cached
+# Target: evallambda.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:evallambda.cmx, file:evallambda.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o evallambda.cmx evallambda.ml # cached
+# Target: parser.ml.depends, tags: { package(ounit2), extension:ml, file:parser.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules parser.ml > parser.ml.depends # cached
+# Target: parser.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:parser.cmx, file:parser.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o parser.cmx parser.ml # cached
+# Target: lexer.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:lexer.cmx, file:lexer.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o lexer.cmx lexer.ml # cached
+# Target: typecheck.ml.depends, tags: { package(ounit2), extension:ml, file:typecheck.ml, ocaml, ocamldep, quiet }
+ocamlfind ocamldep -package ounit2 -modules typecheck.ml > typecheck.ml.depends # cached
+# Target: typecheck.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:typecheck.cmx, file:typecheck.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o typecheck.cmx typecheck.ml # cached
+# Target: tests.cmx, tags: { package(ounit2), compile, extension:cmx, extension:ml, file:tests.cmx, file:tests.ml, implem, native, ocaml, quiet }
+ocamlfind ocamlopt -c -package ounit2 -o tests.cmx tests.ml # cached
+# Target: tests.native, tags: { package(ounit2), dont_link_with, extension:native, file:tests.native, link, native, ocaml, program, quiet }
+ocamlfind ocamlopt -linkpkg -package ounit2 definitions.cmx evallambda.cmx parser.cmx lexer.cmx typecheck.cmx tests.cmx -o tests.native # cached
 # Compilation successful.

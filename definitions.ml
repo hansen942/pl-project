@@ -58,8 +58,6 @@ type sugar =
 | SApplication of sugar * sugar
 | SIf of sugar * sugar * sugar
 | SBool of bool
-| STimes of sugar * sugar
-| SEq of sugar * sugar
 | SUnit
 | SPrint of sugar
 | SSum of user_var_name * sugar (* var_name is the constructor name used *)
@@ -104,7 +102,7 @@ let rec is_val = function
 | Sum (name,e) -> is_val e
 | _ -> false
 
-let rec naive_list_union' acc l1 = function
+let rec naive_list_union' (acc:'a list) (l1:'a list) = function
 | h::t -> if mem h l1 then naive_list_union' acc l1 t else naive_list_union' (h::acc) l1 t
 | [] -> acc @ l1
 
@@ -244,7 +242,10 @@ let rec tsub t_new tvar = fun t ->
   | SumType (name,args) -> SumType (name,(map (tsub t_new tvar) args))
   | _ -> t
 
-let rec string_of_type = function
+(* a generalization of [string_of_type] that lets you specify how to turn var_names into strings*)
+let rec string_of_type' string_of_var t = 
+let string_of_type = string_of_type' string_of_var in
+match t with
 | Integer -> "int"
 | Boolean -> "bool"
 | Fun (t1,t2) ->
@@ -268,25 +269,54 @@ let rec string_of_type = function
   | h::[] -> Printf.sprintf "unary product %s" h
   | h::t -> h ^ (fold_left (fun acc x -> acc ^ " * " ^ x) "" t)
   )
-| TypeVar v -> Printf.sprintf "tvar %s" (string_of_var v)
+| TypeVar v -> Printf.sprintf "%s" (string_of_var v)
+
+(** [string_of_type] gives a string for a type that you give it *)
+let string_of_type = string_of_type' string_of_var 
 
 (** [known_classes] is an association list, if [(a,[c1,c2,c3])] is in the list this means that we know [a] is in the type classes [c1,c2,c3]. *)
 type known_classes = (var_name * class_constraints) list
 
+
 type class_constrained_expr_type = expr_type * known_classes
 
-let string_of_tvar_constraint v = function
+let pretty_tvar_list = ["α"; "β"; "γ"; "τ"; "φ"; "ω"; "δ"; "ε"; "ζ"; "η"; "θ"; "ι"; "κ"; "μ"; "σ"]
+
+let pretty_tvar_name v used = if used >= (length pretty_tvar_list) then (string_of_var v,used) else
+  match v with
+  | Sub _ -> (nth pretty_tvar_list used,used+1) 
+  | Name _ -> (string_of_var v,used)
+
+let pretty_tvar_constraint v string_of_var = function
   | c::[] -> Printf.sprintf "∀ %s %s." (string_of_typeclass c) (string_of_var v)
   | [] -> Printf.sprintf "∀ %s." (string_of_var v)
-  | lst ->
-    let cons_string = fold_left (fun acc x -> acc ^ ", " ^ string_of_typeclass x) "" lst in
+  | c::tail ->
+    let cons_string = fold_left (fun acc x -> acc ^ ", " ^ string_of_typeclass x) (string_of_typeclass c) tail in
     Printf.sprintf "∀ (%s) %s." cons_string (string_of_var v)
+  
+let rec pretty_string_of_tvar_map' acc tvars used =
+  match tvars with
+  | [] -> acc
+  | h::t -> let h_string,used = pretty_tvar_name h used in
+    pretty_string_of_tvar_map' ((h,h_string)::acc) t used
+
+(* generates mapping from these type variables to strings; giving pretty names to the sub variables*)
+let pretty_string_of_tvar_map = pretty_string_of_tvar_map' []
 
 (** this gives string for the type and class constraints associated *)
-let string_of_class_constrained_expr_type = function
-  | (t,kc) -> let kc_needed = filter (fun x -> mem (fst x) (ftv t)) kc in
-    let quantifiers = fold_left (fun acc x -> acc ^ " " ^ (string_of_tvar_constraint (fst x) (snd x))) "" kc_needed in
-    Printf.sprintf "%s%s" quantifiers (string_of_type t)
+let string_of_class_constrained_expr_type constrained_t =
+  let relevant_tvars = ftv (fst constrained_t) in
+  let stringify_map = fun x -> assoc x (pretty_string_of_tvar_map relevant_tvars 0) in
+  let relevant_constraints = filter (fun (x,_) -> mem x relevant_tvars) (snd constrained_t) in
+  match relevant_constraints with
+  | fst_rel_const::tail_rel_cons -> (
+  let string_of_const x = pretty_tvar_constraint (fst x) stringify_map (snd x) in
+  let quant_head = string_of_const fst_rel_const in
+  let quant_tail = fold_left (fun acc x -> acc ^ " " ^ (string_of_const x)) "" tail_rel_cons in
+  let quantifiers = quant_head ^ quant_tail in
+    Printf.sprintf "%s %s" quantifiers (string_of_type' stringify_map (fst constrained_t))
+  )
+  | [] -> string_of_type (fst constrained_t)
 
 (** Elements of [typed_expr] represent expressions which are annotated with types.*)
 type typed_expr =
@@ -305,7 +335,7 @@ type typed_expr =
 | TNeg of typed_expr
 | TBinop of typed_expr * binop * typed_expr
 | NewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * typed_expr (* new type name, type variables used, constructors by types, next expression *)
-| TLet of var_name * typed_expr * typed_expr
+| TLet of var_name * expr_type * typed_expr * typed_expr
 | TLetRec of var_name * expr_type * typed_expr * typed_expr
 
 
@@ -337,7 +367,7 @@ let rec string_of_typed_expr : typed_expr -> string = function
   let dec = Printf.sprintf "newtype %s %s = %s" name bind_vars body in
   Printf.sprintf "%s in %s" dec (string_of_typed_expr s)
   )
-| TLet (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_typed_expr e1) (string_of_typed_expr e2)
+| TLet (v,tv,e1,e2) -> Printf.sprintf "let %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TNeg e -> Printf.sprintf "(-%s)" (string_of_typed_expr e) 
 | TBinop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_typed_expr e1) (string_of_binop binop) (string_of_typed_expr e2)
@@ -368,7 +398,7 @@ type opt_t_expr =
 | OMatch of opt_t_expr * ((user_var_name * opt_t_expr) list)
 | OProj of opt_t_expr * int * int
 | ONewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * opt_t_expr
-| OLet of var_name * opt_t_expr * opt_t_expr 
+| OLet of var_name * (expr_type option) * opt_t_expr * opt_t_expr 
 | OLetRec of var_name * (expr_type option) * opt_t_expr * opt_t_expr 
 | ONeg of opt_t_expr
 | OBinop of opt_t_expr * binop * opt_t_expr
@@ -431,10 +461,15 @@ let rec annotate_opt_t_expr oexpr =
   | OProj(e,i,l) ->
     let* e' = f e in
     return(TProj(e',i,l))
-  | OLet(v,e1,e2) ->
+  | OLet(v,t_opt,e1,e2) ->
+    let* t =
+    match t_opt with
+    | None -> let* name = pull_name in return(TypeVar(name))
+    | Some t -> return t
+    in
     let* e1' = f e1 in
     let* e2' = f e2 in
-    return(TLet(v,e1',e2'))
+    return(TLet(v,t,e1',e2'))
   | OLetRec(v,t_opt,e1,e2) ->
     let* t =
     match t_opt with

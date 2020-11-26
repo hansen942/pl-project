@@ -10,7 +10,7 @@ type info = int * int
 type error_msg = string
 
 let rec strip : typed_expr -> sugar = function
-| TLet (v,e1,e2) -> Let (v, strip e1, strip e2)
+| TLet (v,tv,e1,e2) -> Let (v, strip e1, strip e2)
 | TLetRec (v,tv,e1,e2) -> LetRec (v, strip e1, strip e2)
 | TInt n -> SInt n
 | TBool b -> SBool b
@@ -97,59 +97,78 @@ let cons_map f = function
 | Equality (t1,t2) -> Equality (f t1, f t2)
 | TypeClass (t,c) -> TypeClass (t,c)
 
+(* used when have t1 = t2 to make sure both satisfy all constraints needed of both *)
+let eq_class_constraints t1 t2 classes =
+  let new1_constraints = map (fun (x,y) -> (t1,y)) (filter (fun x -> fst x = t2) classes) in
+  let new2_constraints = map (fun (x,y) -> (t2,y)) (filter (fun x -> fst x = t1) classes) in
+  (classes @ new1_constraints) @ new2_constraints
+
+let tsub_into_constraints t v cons_tail = map (fun (x,y) -> (tsub t v x,tsub t v y)) cons_tail
+let tsub_into_classconstraints t v lst = map (fun (x,y) -> (tsub t v x,y)) lst 
+
 (* Since we mix typeclass constraints and type equality constraints during type checking,
    we pull out all the typeclass constraints to be dealt with later and then do the normal
    unification algo. [classes] is the set of class constraints that remain to be dealt with,
    and are written in terms of the original variables that came out of [simple_check']*)
-let rec unify' classes x =
-match x with
+let rec unify' classes eqconstraints =
+match eqconstraints with
 | [] -> (classes,[])
-| (TypeClass (t1,c))::t -> unify' ((t1,c)::classes) t
-| (Equality (t1,t2))::cons_tail ->
+| (t1,t2)::cons_tail ->
+  let classes = eq_class_constraints t1 t2 classes in
   if t1 = t2 then
   unify' classes cons_tail
   else
   match (t1,t2) with
   (* first we do the two symmetric variable cases; clunky due to way pattern matching works *)
-  | (TypeVar v1, t2) ->
-  (*t1 is a type variable, so if it is not free in t2, just replace t1 with t2 *)
-  (if not (mem v1 (ftv t2)) then
+  | (TypeVar v, t) ->
+  (*t1 is a type variable, so if it is not free in t, just replace t1 with t *)
+  (if not (mem v (ftv t)) then
   (* compute recursive part*)
-  let rec_tail_unify' = unify' classes (map (cons_map (tsub t2 v1)) cons_tail) in
-  (* compose with the map sending v1 -> t2*)
-  (fst rec_tail_unify', sub_comp (snd rec_tail_unify') [(v1,t2)])
+  let rec_tail_unify' = unify' (tsub_into_classconstraints t v classes) (tsub_into_constraints t v cons_tail) in
+  (* compose with the map sending v -> t*)
+  (fst rec_tail_unify', sub_comp (snd rec_tail_unify') [(v,t)])
   else
   (* infinite type failure *)
-  failwith (Printf.sprintf "Cannot solve type constraint %s = %s as this would require constructing an infinite type" (string_of_type t1) (string_of_type t2)))
-  | (t1, TypeVar v2) ->
-  (* symmetric case *)
-  (if not (mem v2 (ftv t1)) then
-  let rec_tail_unify' = unify' classes (map (cons_map (tsub t1 v2)) cons_tail) in
-  (fst rec_tail_unify', sub_comp (snd rec_tail_unify') [(v2,t1)])
+  failwith (Printf.sprintf "Cannot solve type constraint %s = %s as this would require constructing an infinite type" (string_of_type t1) (string_of_type t)))
+  | (t, TypeVar v) ->
+  (*t1 is a type variable, so if it is not free in t, just replace t1 with t *)
+  (if not (mem v (ftv t)) then
+  (* compute recursive part*)
+  let rec_tail_unify' = unify' (tsub_into_classconstraints t v classes) (tsub_into_constraints t v cons_tail) in
+  (* compose with the map sending v -> t*)
+  (fst rec_tail_unify', sub_comp (snd rec_tail_unify') [(v,t)])
   else
   (* infinite type failure *)
-  failwith (Printf.sprintf "Cannot solve type constraint %s = %s as this would require constructing an infinite type" (string_of_type t1) (string_of_type t2))
-  )
+  failwith (Printf.sprintf "Cannot solve type constraint %s = %s as this would require constructing an infinite type" (string_of_type t1) (string_of_type t)))
   (* Neither of those cases held, so now we check if they are both function types *)
   | (Fun (t11,t12), Fun (t21,t22)) ->
     (* they are both functions *)
-    unify' classes (Equality(t11,t21)::Equality(t12,t22)::cons_tail)
+    unify' classes ((t11,t21)::(t12,t22)::cons_tail)
   (* Similarly, we check if they are both tuples *)
   | (Product tlist1, Product tlist2) -> 
     if length tlist1 <> length tlist2 then
     failwith (Printf.sprintf "Cannot solve type constraint %s = %s as these are products of unequal length" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)))
     else 
-    let new_cons = fold_left (fun acc (x,y) -> Equality(x,y)::acc) cons_tail (combine tlist1 tlist2) in
+    let new_cons = fold_left (fun acc (x,y) -> (x,y)::acc) cons_tail (combine tlist1 tlist2) in
     unify' classes new_cons
   (* None of the special cases applied, so cannot be solved. *)
   | (SumType(tname1,targs1), SumType(tname2,targs2)) ->
     if tname1 <> tname2 then
     failwith (Printf.sprintf "Cannot solve type constraint %s = %s as they are different sumtypes." (string_of_type t1) (string_of_type t2)) else
-    let new_constraints = map (fun (x,y) -> Equality (x,y)) (combine targs1 targs2) in
+    let new_constraints = combine targs1 targs2 in
     unify' classes (cons_tail@new_constraints)
   | _ -> failwith (Printf.sprintf "Cannot solve type constraint %s = %s" (string_of_type t1) (string_of_type t2))
 
-let unify = unify' []
+let sep_constraints =
+  fold_left (fun (classlist,eqlist) x ->
+    match x with
+    | Equality (x,y) -> (classlist,(x,y)::eqlist)
+    | TypeClass (x,y) -> ((x,y)::classlist,eqlist)
+    ) ([],[])
+
+let unify constraints =
+  let classconstraints,eqconstraints = sep_constraints constraints in
+  unify' classconstraints eqconstraints
 
 (** [combine_maps] combines two association list-defined functions, assuming that they agree on the intersections of their domains *)
 let combine_maps venv1 venv2 =
@@ -168,13 +187,13 @@ let weakest_class_constraint = function
   |(t,Printable) -> if printable t then [] else failwith (Printf.sprintf "Cannot solve class constraint %s %s" (string_of_typeclass Printable) (string_of_type t))
 
 let rec remove_dups = function
-| (h::t) -> if mem h t then t else h::(remove_dups t)
 | [] -> []
+| h::t -> if mem h t then remove_dups t else h::(remove_dups t)
 
 let combine_class_constraints constraints_w_repeats =
   let vars_w_constraints = remove_dups (map (fun x -> match x with (v,c) -> v) constraints_w_repeats) in
   (* for each of these variables, find all their constraints and put them together, removing any repeats *)
-  map (fun x -> (x,remove_dups (fold_left (fun acc cons -> if fst cons = x then acc @ (snd cons) else acc) [] constraints_w_repeats))) vars_w_constraints
+  map (fun x -> (x,remove_dups (fold_left (fun acc cons -> if fst cons = x then acc @ (filter (fun x -> not (mem x acc)) (snd cons)) else acc) [] constraints_w_repeats))) vars_w_constraints
 
 (* accepts a list of class constraints on types and then returns the weakest constraints on the free type variables to ensure that they are satisfied *)
 let weakest_class_constraints class_constraints : known_classes =
@@ -260,12 +279,12 @@ match op with
 let rec instance_sub v t known_classes e2  = 
   let quick_sub = instance_sub v t known_classes in
   match e2 with
-  | TLet (v',e1,e2) ->
+  | TLet (v',tv',e1,e2) ->
     (let* e1',venv1,known1 = quick_sub e1 in
     (* instances of v = v' in e2 should be bound to v' here *)
-    if v' = v then return (TLet (v', e1', e2),venv1,known1) else
+    if v' = v then return (TLet (v',tv', e1', e2),venv1,known1) else
       let* e2',venv2,known2 = quick_sub e2 in
-      return (TLet (v',e1',e2'),combine_maps venv1 venv2, combine_maps known1 known2)
+      return (TLet (v',tv',e1',e2'),combine_maps venv1 venv2, combine_maps known1 known2)
     )
   | TLetRec (v',tv',e1,e2) ->
     (* in the recursive case, instances of v' = v in either expression are bound to the v' defined here *)
@@ -353,6 +372,11 @@ let rec repeat n x =
 let constrain_all equality_list =
   fold_left (fun acc (x,y) -> acc >>= constrain x y) (return ()) equality_list
 
+let rec has_dups = function
+| [] -> false
+| h::t -> if mem h t then true else has_dups t
+
+
 (* [tcheck'] returns a list of type equality and class constraints for the expression, together with the type of the expression *)
 let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,constraints * var_name) state = function
 | TInt _ -> return Integer
@@ -381,10 +405,12 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
   let* tbody = tcheck' venv' known_classes utenv e in
   return (Fun(tv,tbody))
 | TApplication (e1,e2) ->
+  (* bug with typeclasses seems to arise here: need to express that if t1 has typeclass constraints on its argument then t2 must meet these type class constraints *)
   let* t1 = tcheck' venv known_classes utenv e1 in
   let* t2 = tcheck' venv known_classes utenv e2 in
   let* new_name = draw_name in
-  constrain t1 (Fun(t2,TypeVar new_name)) () >>= ignore(return (TypeVar new_name))
+  constrain t1 (Fun(t2,TypeVar new_name)) ()
+  >>= ignore(return (TypeVar new_name))
 | TIf (e1,e2,e3) ->
   let* t1 = tcheck' venv known_classes utenv e1 in
   let* t2 = tcheck' venv known_classes utenv e2 in
@@ -393,7 +419,7 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
 | TUnit -> return UnitType
 | TPrint e ->
   let* t = tcheck' venv known_classes utenv e in
-  class_constrain t (Printable) () >>= ignore(return UnitType)
+  class_constrain t Printable () >>= ignore(return UnitType)
 | TSum (cons,e) ->(
   match assoc_opt cons (type_of_cons utenv) with
   | None -> failwith (Printf.sprintf "the constructor %s is not defined" cons)
@@ -405,12 +431,8 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
     (* look up the type that the constructor cons expects *)
     let expected_type = snd (find (fun x -> fst x = cons) constructors) in
     let* t = tcheck' venv known_classes utenv e in
-    (* TODO: deal with the recursive case. *)
-    (* for now, check if this constructor is recursive and fail if so *)
-    if mem (Name tname) (ftv expected_type) then failwith (Printf.sprintf "the constructor %s is a recursive case of the type %s, and I have not implemented type checking for recursive types yet." cons tname) else
     (* generate fresh type variables for the expected type. The type variable names in the
        definition of the type may conflict with names in the current name space *)
-    (* TODO: this step must change in the recursive type case as we want to know which type variables were actually tname, i.e. which ones are the recursive ones *)
     let* (expected_type,_),sub_map = constrain_monad_gen_tvars_and_sub expected_type (map (fun x -> (x,[])) targs) in
     (* important that sub_map is a total function on targs *)
     let sub_map = map (fun x -> match assoc_opt x sub_map with Some v -> (x,v) | None -> (x,x)) targs in
@@ -453,10 +475,13 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
   List.iter (Printf.printf "Warning: missing case %s.\n") missing_cases;
   (* for each case, check that the type expected by the constructor is the same as the type that the function expects as an argument *)
     let expected_tlist = map (fun (case,_) -> assoc case cons) cases in
+  (* tclass constraints should be getting put in here... *)
     let* case_funtypes = state_fmap (fun (case_name,foo) -> let* result = tcheck' venv known_classes utenv foo in return(case_name,result)) cases in
-    let in_out = map (fun (case_name,case_t) -> match case_t with
-      | Fun(t1,t2) -> (t1,t2)
-      | _ -> failwith (Printf.sprintf "case %s is not given a function type" case_name)
+    let* in_out = state_fmap (fun (case_name,case_t) -> 
+     let* t1 = draw_name in
+     let* t2 = draw_name in
+     constrain case_t (Fun(TypeVar(t1),TypeVar(t2))) () >>=
+     ignore(return(TypeVar(t1),TypeVar(t2)))
       ) case_funtypes in 
     let* _ = constrain_all (combine expected_tlist (map fst in_out)) in
   (* check that the output of every case is the same type, and return that type *)
@@ -481,9 +506,10 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
   let* gen_prod,t_out = make_gen_prod l in
   let* te = tcheck' venv known_classes utenv e in
   constrain te gen_prod () >>= ignore(return t_out)
-| TLet (v,e1,e2) ->
+| TLet (v,tv,e1,e2) ->
     (fun (constraints,fresh) ->
-    let t1,fresh,var_constraints = tcheck_compact venv e1 fresh known_classes utenv in
+    let application_trick = (TApplication((TLambda(TVar(Name "x"), Name "x", tv), e1))) in
+    let t1,fresh,var_constraints = tcheck_compact venv application_trick fresh known_classes utenv in
     let venv = (v,t1)::venv in
     (* do instance-based type substitution into e2 *)
     (* for using instance_sub we only care about the class constraints for free type variables
@@ -496,6 +522,8 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
        for repeats*)
     let new_venv : (var_name * expr_type) list = venv @ v_local_venv in
     let new_known : (var_name * (type_class list)) list = known_classes @ v_local_known in
+    let expand lst = concat (map (fun (x,lsty) -> map (fun y -> (x,y)) lsty) lst) in
+    let constraints = remove_dups(constraints@(map (fun (tvar,tclass) -> TypeClass(TypeVar(tvar),tclass)) (expand new_known))) in
     (* now we can finally check our new e2' --- we did not increase the number of constraints
        because tcheck_compact will have called unify to eliminate all the new constraints created in e1,
        leaving only the new type class constraints that go into new_known*)
@@ -516,6 +544,8 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
        for repeats*)
     let new_venv : (var_name * expr_type) list = venv @ v_local_venv in
     let new_known : (var_name * (type_class list)) list = known_classes @ v_local_known in
+    let expand lst = concat (map (fun (x,lsty) -> map (fun y -> (x,y)) lsty) lst) in
+    let constraints = remove_dups(constraints@(map (fun (tvar,tclass) -> TypeClass(TypeVar(tvar),tclass)) (expand new_known))) in
     (* now we can finally check our new e2' --- we did not increase the number of constraints
        because tcheck_compact will have called unify to eliminate all the new constraints created in e1,
        leaving only the new type class constraints that go into new_known*)
@@ -525,6 +555,7 @@ let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,cons
     if mem name (user_types utenv) then failwith (Printf.sprintf "type name %s already taken" name) else
     (* check that none of these constructors have already been used *)
     if not (for_all (fun x -> not (mem x (user_cons utenv))) (map fst cons)) then failwith (Printf.sprintf "some constructor in declaration of type %s already used" name) else
+    if has_dups targs then failwith (Printf.sprintf "error in definition of type %s, duplicate type variables" name) else
     (* add to the user type environment *)
     let utenv = (name,targs,cons)::utenv in
     tcheck' venv known_classes utenv cont
@@ -538,17 +569,20 @@ and tcheck_compact venv texpr fresh_tvar known_classes utenv =
   let next_tvar = snd (snd out) in
   let t_out = sub_vars sub_map t in
   (* update the variables in the class constraints we got out *)
-  let class_constraints = map (fun x -> match x with (x,y) -> (sub_vars sub_map x,y)) classes_required in
+  let class_constraints = remove_dups classes_required in
   (* determine what constraints these put on the type variables *)
   let new_var_constraints = weakest_class_constraints class_constraints in
   (* add in the class constraints we already knew *)
-  let all_var_constraints = combine_class_constraints (flatten [new_var_constraints;known_classes]) in
+  (*let all_var_constraints = remove_dups (combine_class_constraints (flatten [new_var_constraints;known_classes])) in*)
   (* to get all the foralls, add an empty constraint for all the non-constrained type variables *)
   let empty_class_constraints =
-    let empty = map (fun x -> (x,[])) (ftv t_out) in
-    filter (fun x -> not (mem (fst x) (map fst all_var_constraints))) empty
+    let constrained_vars = map fst new_var_constraints in
+    let unconstrained_vars = filter (fun x -> not (mem x constrained_vars)) (ftv t_out) in
+    map (fun x -> (x,[])) unconstrained_vars
   in
-  let all_class_constraints = all_var_constraints @ empty_class_constraints in
+  let all_class_constraints = new_var_constraints @ empty_class_constraints in
+  (*print_endline "all var constrained variables";
+  List.iter print_endline ((map (fun (x,y) -> string_of_var x)) all_class_constraints); *)
   (t_out, next_tvar, all_class_constraints)
 
 (** [tcheck] implements prenex polymorphism and haskell-style type classes
@@ -564,10 +598,47 @@ let tcheck expr name : class_constrained_expr_type * var_name =
     | (t,fresh_out,class_out) -> ((t,class_out),fresh_out)
 
 
-let put_in_base_defs expr =
-  NewSum("option",["'a"],[("None",UnitType);("Some",TypeVar(Name("'a")))],
-  TLet(Name "print",TLambda(TPrint(TVar(Name"x")),Name"x",TypeVar(Sub(-1))),expr))
+let add_type expr = function
+  | (name,targs, tdef) ->
+  return(NewSum(name,targs,tdef,expr))
+
+let add_def expr = function
+  | (recursive,name,odef) ->
+    let* tvar = pull_name in
+    let* def = annotate_opt_t_expr odef in
+    return(if recursive then TLetRec(name,TypeVar(tvar),def,expr) else TLet(name,TypeVar(tvar),def,expr))
+
+type ('a,'b) either = Left of 'a | Right of 'b
+
+let rec add_all_of expr = function
+  | (Left x)::t -> let* rest = add_all_of expr t in add_def rest x
+  | (Right x)::t -> let* rest = add_all_of expr t in add_type rest x
+  | [] -> return expr
+
+let oexpr_from_string s =
+  let lexbuf = Lexing.from_string s in
+  Parser.prog Lexer.token lexbuf
+
+let list_def = Right ("list", ["'a"], [("Nil",UnitType);("Cons", Product [TypeVar(Name"'a");SumType("list",[TypeVar(Name"'a")])])])
+
+let option_def = Right ("option",["'a"],[("None",UnitType);("Some",TypeVar(Name("'a")))])
+
+let print_def = Left (false, Name "print",OLambda(OPrint(OVar(Name"x")),Name"x",None))
+
+let map_body = oexpr_from_string
+"lambda f . lambda lst .
+match lst with
+  | Nil x -> Nil
+  | Cons pair ->
+    Cons(f (proj 2 0 pair), map f (proj 2 1 pair))"
+
+let map_def = Left (true, Name "map", map_body)
+
+let base_defs = [list_def;option_def;print_def;map_def]
+
+let put_in_base_defs expr fresh = add_all_of expr base_defs fresh
 
 let typecheck expr init_name =
-  let expr' = put_in_base_defs expr in
-  let mtype,fresh= tcheck expr' init_name in (mtype, strip expr', fresh)
+  let (expr',fresh) = put_in_base_defs expr init_name in
+  let (mtype,fresh) = tcheck expr' fresh in
+  (mtype, strip expr', fresh)
