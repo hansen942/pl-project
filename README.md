@@ -1,6 +1,7 @@
 # A Small Functional Language
 The goal of the project is to build a small ml-like functional language that is strongly typed and supports type inference, polymorphism, recursion, etc.
-Some other cool features I am thinking of adding include Haskell-style functors and monad syntax (maybe do notation).
+It also has limited support for type classes.
+
 ## Status
 The language is based off the applied lambda calculus extended with let statements.
 It also supports user defined algebraic data types, prenex polymorphism type inference, and I am working to add type classes.
