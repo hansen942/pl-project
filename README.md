@@ -8,6 +8,18 @@ It also supports user defined algebraic data types, prenex polymorphism type inf
 Currently the only typeclass is `printable` of types that can be printed with the built-in print function.
 It is currently not possible for the user to define typeclasses, and after thinking about how this could be accomplished, I have decided that while I intend to add more typeclasses, I probably will not allow users to define typeclasses themselves.
 
+## How to Build
+To build the project, clone the repo and then run `make build` in your local copy.
+This should produce a file called `main.native`.
+
+When you have a program you want to run, say `my_program.evco`, just run `./main.native my_program.evco`.
+This will result in an error message if your program is not well-typed, otherwise it will print the type of your program (the type of its final value, usually `unit`), followed by any output from the program.
+
+You can also run my unit tests by running `make test` which will build the test file and run it.
+
+I have only tested this on ubuntu so you may run into trouble with things not printing newlines if you try running this on a non-unix system.
+
+
 ## Example Code
 
 Lists are defined by the code
@@ -44,14 +56,15 @@ map print (map square (ints_up_to 10))
 
 ```
 
-Asking for the type of `map print` will give back `∀ printable α. list α →  list unit` which says that it is a function that takes in lists of printable elements and returns a list of units.
+Asking for the type of `map print` will give back `∀ printable α. list α →  list unit` which says that it is a function that takes in a list of printable elements and returns a list of units.
+This example is included in the repo as `print_squares.evco`.
 
 The option type is also automatically included in every file and has the definition
 ```
 newtype option 'a = None unit | Some 'a in
 ```
 
-Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return option types (there are no exceptions in the language).
+Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return `option` types (there are no exceptions in the language).
 
 
 ```
@@ -104,12 +117,15 @@ in
 
 match chinese_remainder 2 23 1 5 with
 Some x -> print x
+{-- 71 --}
 ```
 
+This example is included in the repo as `chinese_remainder.evco`.
+
 Despite there being no exceptions, you can see that it is still possible to not match every case in match expressions.
-In the case that you give it an input that is not matched, the evaluator will crash.
-This is necessary if you ever want to get outside the `option` type.
-For instance, in `gcd_w_proof` we would have to have it return an `option` type if we matched the `None` case, but we already checked if `m = 0` so that we know no crash will occur.
+In the case that you give it an input that is not matched, the evaluator will crash with a message saying that a case was unmatched, but the message is fairly cryptic so make sure you never write programs where this could happen.
+This is necessary if you ever want to escape the `option` type.
+For instance, in `gcd_w_proof` we would have to have it return an `option` type if we matched the `None` case, but we already checked if `m = 0` so that we know no crash will occur, and skipping this case allows us to return a bare `int` type instead of something of type `option int`.
 I am considering modifying this so that you can have it crash with a custom message, but do not intend to add exceptions to the language, i.e. you will not be able to catch an exception, but just change the message that comes out.
 
 ## Important Notes
