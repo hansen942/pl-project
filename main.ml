@@ -5,25 +5,18 @@ open Evallambda
 let init_name = Sub 0
 
 let filename = ref ""
-let nocheck = ref false
 
-(** [run_prog'] first typechecks its input, then evaluates it*)
-let run_prog' tsugar init_name =
-  if not (!nocheck) then 
+(** [run_prog] first typechecks its input, then evaluates it*)
+let run_prog tsugar init_name =
   let t,e,fresh = typecheck tsugar init_name in
   print_endline (string_of_class_constrained_expr_type t);
-  eval (desugar e) fresh
-  else
-  let e = strip tsugar in
-  eval (desugar e) init_name 
+  eval (desugar e)
 
-let options = [
-  "-nocheck", Arg.Unit (fun _ -> nocheck := true), "Disable type checker"
-]
+let options = []
 
 
 let _ =
-  (* (1) Parse the command-line arguments. *)
+  (* (1) Get the input source file. *)
   let usage_msg = Format.sprintf "Usage: %s [opts] <file>\n" Sys.argv.(0) in
   let _ = begin
     Arg.parse options (fun f ->
@@ -44,7 +37,4 @@ let _ =
       exit 1 in
   (* fill in empty annotations, and for now just print expression *)
   match annotate_opt_t_expr e init_name with
-  (tsug, name) -> run_prog' tsug name
-  
-
-
+  (tsug, name) -> run_prog tsug name

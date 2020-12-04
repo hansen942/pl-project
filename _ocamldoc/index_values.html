@@ -8,7 +8,9 @@
 <link title="Index of values" rel=Appendix href="index_values.html">
 <link title="Index of modules" rel=Appendix href="index_modules.html">
 <link title="Definitions" rel="Chapter" href="Definitions.html">
-<link title="Typecheck" rel="Chapter" href="Typecheck.html"><title>Index of values</title>
+<link title="Typecheck" rel="Chapter" href="Typecheck.html">
+<link title="Evallambda" rel="Chapter" href="Evallambda.html">
+<link title="Main" rel="Chapter" href="Main.html"><title>Index of values</title>
 </head>
 <body>
 <div class="navbar">&nbsp;<a class="up" href="index.html" title="Index">Up</a>
@@ -16,15 +18,29 @@
 <h1>Index of values</h1>
 <table>
 <tr><td align="left"><div></div></td></tr>
-<tr><td><a href="Typecheck.html#VAL( let* )">( let* )</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Definitions.html#VAL( let* )">( let* )</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VAL(>>=)">(&gt;&gt;=)</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Definitions.html#VAL(>>=)">(&gt;&gt;=)</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VAL(>>=^)">(&gt;&gt;=^)</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td align="left"><div>A</div></td></tr>
+<tr><td><a href="Typecheck.html#VALadd_all_of">add_all_of</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALadd_def">add_def</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALadd_type">add_type</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALannotate_opt_t_expr">annotate_opt_t_expr</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td align="left"><div>B</div></td></tr>
+<tr><td><a href="Typecheck.html#VALbase_defs">base_defs</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td align="left"><div>C</div></td></tr>
 <tr><td><a href="Typecheck.html#VALclass_constrain">class_constrain</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<p><code class="code">class_constrain</code> is used to create a typeclass constraint when working in the <code class="code">state</code> monad used by <code class="code">tcheck'</code></p>
+
+</div>
+</td></tr>
 <tr><td><a href="Typecheck.html#VALcombine_class_constraints">combine_class_constraints</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALcombine_maps">combine_maps</a> [<a href="Typecheck.html">Typecheck</a>]</td>
@@ -33,22 +49,47 @@
 
 </div>
 </td></tr>
-<tr><td><a href="Typecheck.html#VALcons_map">cons_map</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALcons_for_t">cons_for_t</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALconstrain">constrain</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td><div class="info">
+<p><code class="code">constrain</code> is used to equate two types when working in the <code class="code">state</code> monad used by <code class="code">tcheck'</code></p>
+
+</div>
+</td></tr>
+<tr><td><a href="Typecheck.html#VALconstrain_all">constrain_all</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALconstrain_monad_gen_tvars_and_sub">constrain_monad_gen_tvars_and_sub</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td align="left"><div>D</div></td></tr>
-<tr><td><a href="Typecheck.html#VALdeclared_mismatch_error">declared_mismatch_error</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
 <tr><td><a href="Definitions.html#VALdesugar">desugar</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALdraw_name">draw_name</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Evallambda.html#VALdo_binop">do_binop</a> [<a href="Evallambda.html">Evallambda</a>]</td>
+<td></td></tr>
+<tr><td><a href="Evallambda.html#VALdraw_name">draw_name</a> [<a href="Evallambda.html">Evallambda</a>]</td>
 <td><div class="info">
 <p><code class="code">draw_name</code> gives back the next free name and updates the state</p>
 
 </div>
 </td></tr>
+<tr><td><a href="Typecheck.html#VALdraw_name">draw_name</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td><div class="info">
+<p><code class="code">draw_name</code> gives back the next free name and updates the state.</p>
+
+</div>
+</td></tr>
+<tr><td align="left"><div>E</div></td></tr>
+<tr><td><a href="Typecheck.html#VALeq_class_constraints">eq_class_constraints</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Evallambda.html#VALeval">eval</a> [<a href="Evallambda.html">Evallambda</a>]</td>
+<td></td></tr>
+<tr><td><a href="Evallambda.html#VALeval'">eval'</a> [<a href="Evallambda.html">Evallambda</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALexpected_type">expected_type</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
 <tr><td align="left"><div>F</div></td></tr>
+<tr><td><a href="Main.html#VALfilename">filename</a> [<a href="Main.html">Main</a>]</td>
+<td></td></tr>
 <tr><td><a href="Definitions.html#VALftv">ftv</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALfv">fv</a> [<a href="Definitions.html">Definitions</a>]</td>
@@ -60,7 +101,7 @@
 <tr><td align="left"><div>G</div></td></tr>
 <tr><td><a href="Typecheck.html#VALgen_new_tvars">gen_new_tvars</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td><div class="info">
-<p><code class="code">gen_new_tvars t known</code> gives back <code class="code">t',venv',known'</code>,
+<p><code class="code">gen_new_tvars t known</code> gives back <code class="code">t',known'</code>,
     <code class="code">t'</code> is an equivalent type with fresh type
     variables and <code class="code">known'</code> is a class constraint object that defines the constraints
     for all the free variables of <code class="code">t'</code> (but not necessarily all the variables that
@@ -70,21 +111,35 @@
 </td></tr>
 <tr><td><a href="Typecheck.html#VALgen_new_tvars'">gen_new_tvars'</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
+<tr><td><a href="Typecheck.html#VALgen_new_tvars_and_sub">gen_new_tvars_and_sub</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td align="left"><div>H</div></td></tr>
+<tr><td><a href="Typecheck.html#VALhas_dups">has_dups</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
 <tr><td align="left"><div>I</div></td></tr>
 <tr><td><a href="Typecheck.html#VALignore">ignore</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td><div class="info">
+<p><code class="code">ignore</code> takes a function and creates a new function that is the same but ignores an additional first argument, useful when you just want the side-effect of the last monadic function</p>
+
+</div>
+</td></tr>
+<tr><td><a href="Main.html#VALinit_name">init_name</a> [<a href="Main.html">Main</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALinferred_mismatch">inferred_mismatch</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Evallambda.html#VALinit_name">init_name</a> [<a href="Evallambda.html">Evallambda</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALinit_name">init_name</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Definitions.html#VALinit_name">init_name</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALinstance_sub">instance_sub</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
-<tr><td><a href="Typecheck.html#VALinstance_sub_simple">instance_sub_simple</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALis_val">is_val</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td align="left"><div>L</div></td></tr>
-<tr><td><a href="Typecheck.html#VALlet^">let^</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALlist_def">list_def</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td align="left"><div>M</div></td></tr>
+<tr><td><a href="Typecheck.html#VALmap_body">map_body</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALmap_def">map_def</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td align="left"><div>N</div></td></tr>
 <tr><td><a href="Definitions.html#VALnaive_list_union">naive_list_union</a> [<a href="Definitions.html">Definitions</a>]</td>
@@ -95,25 +150,63 @@
 </td></tr>
 <tr><td><a href="Definitions.html#VALnaive_list_union'">naive_list_union'</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
+<tr><td><a href="Typecheck.html#VALnum_targs">num_targs</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td align="left"><div>O</div></td></tr>
+<tr><td><a href="Typecheck.html#VALoexpr_from_string">oexpr_from_string</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALoption_def">option_def</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Main.html#VALoptions">options</a> [<a href="Main.html">Main</a>]</td>
+<td></td></tr>
 <tr><td align="left"><div>P</div></td></tr>
+<tr><td><a href="Definitions.html#VALpretty_string_of_tvar_map">pretty_string_of_tvar_map</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALpretty_string_of_tvar_map'">pretty_string_of_tvar_map'</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALpretty_tvar_constraint">pretty_tvar_constraint</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALpretty_tvar_list">pretty_tvar_list</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALpretty_tvar_name">pretty_tvar_name</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALprint_def">print_def</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
 <tr><td><a href="Typecheck.html#VALprint_sub_map">print_sub_map</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALprint_var_sub_map">print_var_sub_map</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALprintable">printable</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALpull_name">pull_name</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
-<tr><td align="left"><div>Q</div></td></tr>
-<tr><td><a href="Typecheck.html#VALquantify">quantify</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Definitions.html#VALpull_name">pull_name</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALput_in_base_defs">put_in_base_defs</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td align="left"><div>R</div></td></tr>
 <tr><td><a href="Typecheck.html#VALremove_dups">remove_dups</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALreturn">return</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALrepeat">repeat</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALreturn'">return'</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Definitions.html#VALreturn">return</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
+<tr><td><a href="Main.html#VALrun_prog">run_prog</a> [<a href="Main.html">Main</a>]</td>
+<td><div class="info">
+<p><code class="code">run_prog</code> first typechecks its input, then evaluates it</p>
+
+</div>
+</td></tr>
 <tr><td align="left"><div>S</div></td></tr>
-<tr><td><a href="Typecheck.html#VALstate">state</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALsep_constraints">sep_constraints</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Evallambda.html#VALsmallstep">smallstep</a> [<a href="Evallambda.html">Evallambda</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALstate">state</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALstate_fmap">state_fmap</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Definitions.html#VALstring_of_binop">string_of_binop</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALstring_of_class_constrained_expr_type">string_of_class_constrained_expr_type</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td><div class="info">
@@ -128,25 +221,39 @@
 <tr><td><a href="Definitions.html#VALstring_of_sugar">string_of_sugar</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALstring_of_tconstraint">string_of_tconstraint</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
-<tr><td><a href="Definitions.html#VALstring_of_tvar_constraint">string_of_tvar_constraint</a> [<a href="Definitions.html">Definitions</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<p><code class="code">string_of_tconstraint</code> can be used to print a <code class="code">tconstraint</code></p>
+
+</div>
+</td></tr>
 <tr><td><a href="Definitions.html#VALstring_of_type">string_of_type</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td><div class="info">
+<p><code class="code">string_of_type</code> gives a string for a type that you give it</p>
+
+</div>
+</td></tr>
+<tr><td><a href="Definitions.html#VALstring_of_type'">string_of_type'</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALstring_of_typeclass">string_of_typeclass</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALstring_of_typed_expr">string_of_typed_expr</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
-<tr><td><a href="Definitions.html#VALstring_of_typed_sugar">string_of_typed_sugar</a> [<a href="Definitions.html">Definitions</a>]</td>
-<td></td></tr>
 <tr><td><a href="Definitions.html#VALstring_of_var">string_of_var</a> [<a href="Definitions.html">Definitions</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALstrip">strip</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALstrip_base">strip_base</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
+<tr><td><a href="Evallambda.html#VALsub">sub</a> [<a href="Evallambda.html">Evallambda</a>]</td>
+<td><div class="info">
+<p><code class="code">sub e e_x x</code> gives back <code class="code">e</code> with free occurrences of <code class="code">x</code> replaced by <code class="code">e_x</code>.</p>
+
+</div>
+</td></tr>
 <tr><td><a href="Typecheck.html#VALsub_comp">sub_comp</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
+<td><div class="info">
+<p><code class="code">sub_comp sub2 sub1</code> gives back the composite map sub2 \circ sub1.</p>
+
+</div>
+</td></tr>
 <tr><td><a href="Typecheck.html#VALsub_vars">sub_vars</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td><div class="info">
 <p><code class="code">sub_vars sub_map t</code> gives back the type <code class="code">t</code> but with type variables substituted as specificied in <code class="code">sub_map</code></p>
@@ -154,30 +261,25 @@
 </div>
 </td></tr>
 <tr><td align="left"><div>T</div></td></tr>
-<tr><td><a href="Typecheck.html#VALtcheck'">tcheck'</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALtcheck">tcheck</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td><div class="info">
-<p><code class="code">tcheck'</code> implements prenex polymorphism and haskell-style type classes
-    <code class="code">venv</code> gives the current variable -&gt; type mapping
-    <code class="code">texpr</code> is the typed expression to be type checked
-    <code class="code">known_classes</code> are the known type class constraints on type variables
-    TODO: add the argument <code class="code">utenv</code>, the environment of user defined types, and set up typechecking for newsum
-    the state monad is used to keep track of the next fresh type variable name available
-    The output of the function is a pair <code class="code">expr_type * var_name</code> giving the next fresh
-    type variable name that is available and the type of the expression that you put in</p>
+<p><code class="code">tcheck</code> implements prenex polymorphism and haskell-style type classes
+    <code class="code">name</code> is the next name available for type variables
+    returns a class constrained type and the next fresh variable</p>
 
 </div>
 </td></tr>
-<tr><td><a href="Typecheck.html#VALtcheck_simple'">tcheck_simple'</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALtcheck'">tcheck'</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
-<tr><td><a href="Typecheck.html#VALtcheck_simple''">tcheck_simple''</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
-<tr><td><a href="Typecheck.html#VALtcheck_simple_compact">tcheck_simple_compact</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
-<tr><td><a href="Typecheck.html#VALtcheck_simple_test">tcheck_simple_test</a> [<a href="Typecheck.html">Typecheck</a>]</td>
-<td></td></tr>
-<tr><td><a href="Typecheck.html#VALtcheck_simple_test_old">tcheck_simple_test_old</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<tr><td><a href="Typecheck.html#VALtcheck_compact">tcheck_compact</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Definitions.html#VALtsub">tsub</a> [<a href="Definitions.html">Definitions</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALtsub_into_classconstraints">tsub_into_classconstraints</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALtsub_into_constraints">tsub_into_constraints</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALtype_of_cons">type_of_cons</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALtypecheck">typecheck</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
@@ -189,6 +291,12 @@
 <tr><td><a href="Typecheck.html#VALunify'">unify'</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td><a href="Typecheck.html#VALupdate_sub">update_sub</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALuser_cons">user_cons</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALuser_targs">user_targs</a> [<a href="Typecheck.html">Typecheck</a>]</td>
+<td></td></tr>
+<tr><td><a href="Typecheck.html#VALuser_types">user_types</a> [<a href="Typecheck.html">Typecheck</a>]</td>
 <td></td></tr>
 <tr><td align="left"><div>W</div></td></tr>
 <tr><td><a href="Typecheck.html#VALweakest_class_constraint">weakest_class_constraint</a> [<a href="Typecheck.html">Typecheck</a>]</td>

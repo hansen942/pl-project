@@ -11,7 +11,7 @@ let tsug_from_string s =
 (** [run_prog] first typechecks its input, then evaluates it. init_name is a name that is not currently used as a type variable*)
 let run_prog tsugar init_name =
   let t,e,n = typecheck tsugar init_name in
-  Evallambda.eval (desugar e) n
+  Evallambda.eval (desugar e)
 
 let quick_get_type tsugar = match (typecheck tsugar init_name) with x,_,_ -> x
 let quick_show_type tsugar = print_endline (string_of_class_constrained_expr_type (quick_get_type tsugar))

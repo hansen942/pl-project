@@ -1,13 +1,5 @@
 open Definitions
 open List
-(* TODO: we don't use the either monad anymore so no reason to create new syntax for state monad here *)
-(* unfortunately we cannot overload the monadic operators *)
-
-(** [info] should be line and column info *)
-type info = int * int
-
-(* [error_msg] tells what went wrong during type checking *)
-type error_msg = string
 
 let rec strip : typed_expr -> sugar = function
 | TLet (v,tv,e1,e2) -> Let (v, strip e1, strip e2)
@@ -40,30 +32,33 @@ let print_sub_map =
 let print_var_sub_map =
   List.iter (fun x -> match x with (vname_in, vname_out) -> (Printf.printf "%s ↦ %s" (string_of_var vname_in) (string_of_var vname_out); print_newline ()))
 let undeclared_error v =  Printf.sprintf "The variable %s is undeclared" (string_of_var v)
-let inferred_mismatch e t reason found = Printf.sprintf "Expression %s was expected to have type %s because %s but its actual type is %s" (string_of_typed_expr e) (string_of_type t) reason (string_of_type found)
+(*let inferred_mismatch e t reason found = Printf.sprintf "Expression %s was expected to have type %s because %s but its actual type is %s" (string_of_typed_expr e) (string_of_type t) reason (string_of_type found)
 let declared_mismatch_error v declared got = Printf.sprintf "%s had declared type %s but was equated to an expression of type %s" (string_of_var v) (string_of_type declared) (string_of_type got)
+*)
+(* may want to use this error messages *)
 
-
+(** [tconstraint] is used to describe a type equality or type class constraint *)
 type tconstraint =
 | Equality of expr_type * expr_type
 | TypeClass of expr_type * type_class
 type constraints = tconstraint list
 
+(** [string_of_tconstraint] can be used to print a [tconstraint] *)
 let string_of_tconstraint = function
 | Equality (t1,t2) -> Printf.sprintf "%s = %s" (string_of_type t1) (string_of_type t2)
-| TypeClass (t,c) -> Printf.sprintf "%s = %s" (string_of_type t) (string_of_typeclass c)
+| TypeClass (t,c) -> Printf.sprintf "%s is of typeclass %s" (string_of_type t) (string_of_typeclass c)
 
 let string_of_constraints =
 fold_left (fun acc x -> acc ^ "\n" ^ (string_of_tconstraint x)) ""
 
-
+(** [constrain] is used to equate two types when working in the [state] monad used by [tcheck'] *)
 let constrain t1 t2 _ (constraints,name) = ((),((Equality (t1,t2))::constraints,name))
+(** [class_constrain] is used to create a typeclass constraint when working in the [state] monad used by [tcheck'] *)
 let class_constrain t1 c _ (constraints,name) = ((),((TypeClass (t1,c))::constraints,name))
+(** [ignore] takes a function and creates a new function that is the same but ignores an additional first argument, useful when you just want the side-effect of the last monadic function *)
 let ignore f = fun _ -> f
 
-let init_name : var_name = Sub 0
-
-(** [draw_name] gives back the next free name and updates the state *)
+(** [draw_name] gives back the next free name and updates the state. This works in the [state] monad used in [tcheck'] *)
 let draw_name : (var_name,constraints * var_name) state = function
   | (c,Sub n) -> (Sub n,(c,Sub (n+1)))
   | _ -> failwith "type variable source corrupted, unable to draw name"
@@ -84,20 +79,13 @@ let rec sub_vars sub_map t =
 
 let update_sub sub1 sub2 = map (fun (x,y) -> (x,sub_vars sub2 y)) sub1
 
-(*[sub_comp sub2 sub1] gives back the composite map sub2 \circ sub1.
+(**[sub_comp sub2 sub1] gives back the composite map sub2 \circ sub1.
   Precondition: The domains of sub1 and sub2 are disjoint*)
 let sub_comp sub2 sub1 =
   let sub1_new = update_sub sub1 sub2 in
   sub2 @ sub1_new
 
-(* used to substitute into all the type equations.
-   We don't touch the typeclass constraints because
-   these are just supposed to be ignored in unify*)
-let cons_map f = function
-| Equality (t1,t2) -> Equality (f t1, f t2)
-| TypeClass (t,c) -> TypeClass (t,c)
-
-(* used when have t1 = t2 to make sure both satisfy all constraints needed of both *)
+(** used in [unify'] when have t1 = t2 to make sure both satisfy all typeclass constraints needed of both. it updates the class constraints to include the maximum of the constraints for both [t1] and [t2] for each*)
 let eq_class_constraints t1 t2 classes =
   let new1_constraints = map (fun (x,y) -> (t1,y)) (filter (fun x -> fst x = t2) classes) in
   let new2_constraints = map (fun (x,y) -> (t2,y)) (filter (fun x -> fst x = t1) classes) in
@@ -586,11 +574,7 @@ and tcheck_compact venv texpr fresh_tvar known_classes utenv =
   (t_out, next_tvar, all_class_constraints)
 
 (** [tcheck] implements prenex polymorphism and haskell-style type classes
-    [venv] gives the current variable -> type mapping
-    [texpr] is the typed expression to be type checked
-    [known_classes] are the known type class constraints on type variables
-    TODO: add the argument [utenv], the environment of user defined types, and set up typechecking for newsum
-    basically just a caller for [tcheck_compact], it
+    [name] is the next name available for type variables
     returns a class constrained type and the next fresh variable*)
 let tcheck expr name : class_constrained_expr_type * var_name =
     (*just call tcheck_compact in order to get the type *)

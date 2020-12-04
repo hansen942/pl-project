@@ -11,7 +11,9 @@
 <link title="Index of values" rel=Appendix href="index_values.html">
 <link title="Index of modules" rel=Appendix href="index_modules.html">
 <link title="Definitions" rel="Chapter" href="Definitions.html">
-<link title="Typecheck" rel="Chapter" href="Typecheck.html"><title>Definitions</title>
+<link title="Typecheck" rel="Chapter" href="Typecheck.html">
+<link title="Evallambda" rel="Chapter" href="Evallambda.html">
+<link title="Main" rel="Chapter" href="Main.html"><title>Definitions</title>
 </head>
 <body>
 <div class="navbar">&nbsp;<a class="up" href="index.html" title="Index">Up</a>
@@ -51,6 +53,80 @@
 <p><code class="code">var_name</code> can use integers because this makes getting new variable names easier</p>
 </div>
 </div>
+
+
+<pre><code><span id="TYPEbinop"><span class="keyword">type</span> <code class="type"></code>binop</span> = </code></pre><table class="typetable">
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Plus"><span class="constructor">Plus</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Times"><span class="constructor">Times</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Subtract"><span class="constructor">Subtract</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Mod"><span class="constructor">Mod</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.L"><span class="constructor">L</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.G"><span class="constructor">G</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.And"><span class="constructor">And</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Or"><span class="constructor">Or</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Eq"><span class="constructor">Eq</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTbinop.Div"><span class="constructor">Div</span></span></code></td>
+
+</tr></table>
+
 
 
 <pre><code><span id="TYPEexpr"><span class="keyword">type</span> <code class="type"></code>expr</span> = </code></pre><table class="typetable">
@@ -100,27 +176,6 @@
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTexpr.Plus"><span class="constructor">Plus</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTexpr.Times"><span class="constructor">Times</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTexpr.Eq"><span class="constructor">Eq</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
 <code><span id="TYPEELTexpr.Unit"><span class="constructor">Unit</span></span></code></td>
 
 </tr>
@@ -158,6 +213,20 @@
 <td align="left" valign="top" >
 <code><span id="TYPEELTexpr.Proj"><span class="constructor">Proj</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * int</code></code></td>
 
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Neg"><span class="constructor">Neg</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTexpr.Binop"><span class="constructor">Binop</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> * <a href="Definitions.html#TYPEbinop">binop</a> * <a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+
 </tr></table>
 
 <div class="info ">
@@ -193,7 +262,98 @@
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTsugar.Base"><span class="constructor">Base</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEexpr">expr</a></code></code></td>
+<code><span id="TYPEELTsugar.SInt"><span class="constructor">SInt</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SVar"><span class="constructor">SVar</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SLambda"><span class="constructor">SLambda</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEvar_name">var_name</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SApplication"><span class="constructor">SApplication</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SIf"><span class="constructor">SIf</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SBool"><span class="constructor">SBool</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SUnit"><span class="constructor">SUnit</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SPrint"><span class="constructor">SPrint</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SSum"><span class="constructor">SSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SProd"><span class="constructor">SProd</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> list</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SMatch"><span class="constructor">SMatch</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEsugar">sugar</a>) list</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SProj"><span class="constructor">SProj</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> * int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SNeg"><span class="constructor">SNeg</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTsugar.SBinop"><span class="constructor">SBinop</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> * <a href="Definitions.html#TYPEbinop">binop</a> * <a href="Definitions.html#TYPEsugar">sugar</a></code></code></td>
 
 </tr></table>
 
@@ -232,6 +392,7 @@
 </div>
 
 <pre><span id="VALstring_of_var"><span class="keyword">val</span> string_of_var</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> -> string</code></pre>
+<pre><span id="VALstring_of_binop"><span class="keyword">val</span> string_of_binop</span> : <code class="type"><a href="Definitions.html#TYPEbinop">binop</a> -> string</code></pre>
 <pre><span id="VALstring_of_expr"><span class="keyword">val</span> string_of_expr</span> : <code class="type"><a href="Definitions.html#TYPEexpr">expr</a> -> string</code></pre>
 <pre><span id="VALstring_of_sugar"><span class="keyword">val</span> string_of_sugar</span> : <code class="type"><a href="Definitions.html#TYPEsugar">sugar</a> -> string</code></pre>
 <pre><code><span id="TYPEtype_class"><span class="keyword">type</span> <code class="type"></code>type_class</span> = </code></pre><table class="typetable">
@@ -301,7 +462,7 @@
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTexpr_type.SumType"><span class="constructor">SumType</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a><br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a>) list</code></code></td>
+<code><span id="TYPEELTexpr_type.SumType"><span class="constructor">SumType</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> list</code></code></td>
 
 </tr></table>
 
@@ -314,7 +475,13 @@
 
 <pre><span id="VALftv"><span class="keyword">val</span> ftv</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> -> <a href="Definitions.html#TYPEvar_name">var_name</a> Stdlib.List.t</code></pre>
 <pre><span id="VALtsub"><span class="keyword">val</span> tsub</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> -><br>       <a href="Definitions.html#TYPEvar_name">var_name</a> -> <a href="Definitions.html#TYPEexpr_type">expr_type</a> -> <a href="Definitions.html#TYPEexpr_type">expr_type</a></code></pre>
-<pre><span id="VALstring_of_type"><span class="keyword">val</span> string_of_type</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> -> string</code></pre>
+<pre><span id="VALstring_of_type'"><span class="keyword">val</span> string_of_type'</span> : <code class="type">(<a href="Definitions.html#TYPEvar_name">var_name</a> -> string) -><br>       <a href="Definitions.html#TYPEexpr_type">expr_type</a> -> <a href="Definitions.html#TYPEuser_var_name">user_var_name</a></code></pre>
+<pre><span id="VALstring_of_type"><span class="keyword">val</span> string_of_type</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> -> <a href="Definitions.html#TYPEuser_var_name">user_var_name</a></code></pre><div class="info ">
+<div class="info-desc">
+<p><code class="code">string_of_type</code> gives a string for a type that you give it</p>
+</div>
+</div>
+
 <pre><span id="TYPEknown_classes"><span class="keyword">type</span> <code class="type"></code>known_classes</span> = <code class="type">(<a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEclass_constraints">class_constraints</a>) list</code> </pre>
 <div class="info ">
 <div class="info-desc">
@@ -326,8 +493,12 @@
 <pre><span id="TYPEclass_constrained_expr_type"><span class="keyword">type</span> <code class="type"></code>class_constrained_expr_type</span> = <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> * <a href="Definitions.html#TYPEknown_classes">known_classes</a></code> </pre>
 
 
-<pre><span id="VALstring_of_tvar_constraint"><span class="keyword">val</span> string_of_tvar_constraint</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> -> <a href="Definitions.html#TYPEtype_class">type_class</a> Stdlib.List.t -> string</code></pre>
-<pre><span id="VALstring_of_class_constrained_expr_type"><span class="keyword">val</span> string_of_class_constrained_expr_type</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> *<br>       (<a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEtype_class">type_class</a> Stdlib.List.t) list -> <br>       string</code></pre><div class="info ">
+<pre><span id="VALpretty_tvar_list"><span class="keyword">val</span> pretty_tvar_list</span> : <code class="type">string Stdlib.List.t</code></pre>
+<pre><span id="VALpretty_tvar_name"><span class="keyword">val</span> pretty_tvar_name</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> -> int -> string * int</code></pre>
+<pre><span id="VALpretty_tvar_constraint"><span class="keyword">val</span> pretty_tvar_constraint</span> : <code class="type">'a -> ('a -> string) -> <a href="Definitions.html#TYPEtype_class">type_class</a> Stdlib.List.t -> string</code></pre>
+<pre><span id="VALpretty_string_of_tvar_map'"><span class="keyword">val</span> pretty_string_of_tvar_map'</span> : <code class="type">(<a href="Definitions.html#TYPEvar_name">var_name</a> * string) Stdlib.List.t -><br>       <a href="Definitions.html#TYPEvar_name">var_name</a> Stdlib.List.t -><br>       int -> (<a href="Definitions.html#TYPEvar_name">var_name</a> * string) Stdlib.List.t</code></pre>
+<pre><span id="VALpretty_string_of_tvar_map"><span class="keyword">val</span> pretty_string_of_tvar_map</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> Stdlib.List.t -><br>       int -> (<a href="Definitions.html#TYPEvar_name">var_name</a> * string) Stdlib.List.t</code></pre>
+<pre><span id="VALstring_of_class_constrained_expr_type"><span class="keyword">val</span> string_of_class_constrained_expr_type</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> *<br>       (<a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEtype_class">type_class</a> Stdlib.List.t) list -><br>       <a href="Definitions.html#TYPEuser_var_name">user_var_name</a></code></pre><div class="info ">
 <div class="info-desc">
 <p>this gives string for the type and class constraints associated</p>
 </div>
@@ -359,20 +530,6 @@
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTtyped_expr.TPlus"><span class="constructor">TPlus</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTtyped_expr.TTimes"><span class="constructor">TTimes</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
 <code><span id="TYPEELTtyped_expr.TLambda"><span class="constructor">TLambda</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a></code></code></td>
 
 </tr>
@@ -388,13 +545,6 @@
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
 <code><span id="TYPEELTtyped_expr.TIf"><span class="constructor">TIf</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTtyped_expr.TEq"><span class="constructor">TEq</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
 
 </tr>
 <tr>
@@ -438,6 +588,41 @@
 <td align="left" valign="top" >
 <code><span id="TYPEELTtyped_expr.TProj"><span class="constructor">TProj</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * int * int</code></code></td>
 
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TNeg"><span class="constructor">TNeg</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TBinop"><span class="constructor">TBinop</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> * <a href="Definitions.html#TYPEbinop">binop</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.NewSum"><span class="constructor">NewSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEuser_var_name">user_var_name</a> list<br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a>) list<br>        * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TLet"><span class="constructor">TLet</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a><br>        * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTtyped_expr.TLetRec"><span class="constructor">TLetRec</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a><br>        * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
+
 </tr></table>
 
 <div class="info ">
@@ -448,76 +633,138 @@
 
 
 <pre><span id="VALstring_of_typed_expr"><span class="keyword">val</span> string_of_typed_expr</span> : <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> -> string</code></pre>
-<pre><code><span id="TYPEtyped_sugar"><span class="keyword">type</span> <code class="type"></code>typed_sugar</span> = </code></pre><table class="typetable">
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTtyped_sugar.NewSum"><span class="constructor">NewSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a><br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a>) list</code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTtyped_sugar.TLet"><span class="constructor">TLet</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEtyped_sugar">typed_sugar</a> * <a href="Definitions.html#TYPEtyped_sugar">typed_sugar</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTtyped_sugar.TLetRec"><span class="constructor">TLetRec</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> * <a href="Definitions.html#TYPEtyped_sugar">typed_sugar</a><br>        * <a href="Definitions.html#TYPEtyped_sugar">typed_sugar</a></code></code></td>
-
-</tr>
-<tr>
-<td align="left" valign="top" >
-<code><span class="keyword">|</span></code></td>
-<td align="left" valign="top" >
-<code><span id="TYPEELTtyped_sugar.TBase"><span class="constructor">TBase</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a></code></code></td>
-
-</tr></table>
-
-<div class="info ">
-<div class="info-desc">
-<p><code class="code">typed_sugar</code> is a sugary version of <code class="code">typed_expr</code>.
-    The idea is that <code class="code">typed_sugar</code> keeps track of where <code class="code">let</code> and <code class="code">let rec</code> are used.</p>
-</div>
-</div>
-
-
-<pre><span id="VALstring_of_typed_sugar"><span class="keyword">val</span> string_of_typed_sugar</span> : <code class="type"><a href="Definitions.html#TYPEtyped_sugar">typed_sugar</a> -> string</code></pre>
 <pre><span id="VALprintable"><span class="keyword">val</span> printable</span> : <code class="type"><a href="Definitions.html#TYPEexpr_type">expr_type</a> -> bool</code></pre>
-<pre><code><span id="TYPEdef"><span class="keyword">type</span> <code class="type">'a</code> def</span> = </code></pre><table class="typetable">
+<pre><code><span id="TYPEopt_t_expr"><span class="keyword">type</span> <code class="type"></code>opt_t_expr</span> = </code></pre><table class="typetable">
 <tr>
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTdef.Value"><span class="constructor">Value</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * 'a</code></code></td>
+<code><span id="TYPEELTopt_t_expr.OInt"><span class="constructor">OInt</span></span> <span class="keyword">of</span> <code class="type">int</code></code></td>
 
 </tr>
 <tr>
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTdef.NewSum"><span class="constructor">NewSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a><br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> list) list</code></code></td>
+<code><span id="TYPEELTopt_t_expr.OBool"><span class="constructor">OBool</span></span> <span class="keyword">of</span> <code class="type">bool</code></code></td>
 
 </tr>
 <tr>
 <td align="left" valign="top" >
 <code><span class="keyword">|</span></code></td>
 <td align="left" valign="top" >
-<code><span id="TYPEELTdef.NewProd"><span class="constructor">NewProd</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> list</code></code></td>
+<code><span id="TYPEELTopt_t_expr.OVar"><span class="constructor">OVar</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OLambda"><span class="constructor">OLambda</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> * <a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> option</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OApplication"><span class="constructor">OApplication</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OIf"><span class="constructor">OIf</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OUnit"><span class="constructor">OUnit</span></span></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OPrint"><span class="constructor">OPrint</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OSum"><span class="constructor">OSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OProd"><span class="constructor">OProd</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> list</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OMatch"><span class="constructor">OMatch</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a><br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a>) list</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OProj"><span class="constructor">OProj</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> * int * int</code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.ONewSum"><span class="constructor">ONewSum</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEuser_var_name">user_var_name</a> list<br>        * (<a href="Definitions.html#TYPEuser_var_name">user_var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a>) list<br>        * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OLet"><span class="constructor">OLet</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> option * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a><br>        * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OLetRec"><span class="constructor">OLetRec</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEexpr_type">expr_type</a> option * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a><br>        * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.ONeg"><span class="constructor">ONeg</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
+
+</tr>
+<tr>
+<td align="left" valign="top" >
+<code><span class="keyword">|</span></code></td>
+<td align="left" valign="top" >
+<code><span id="TYPEELTopt_t_expr.OBinop"><span class="constructor">OBinop</span></span> <span class="keyword">of</span> <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> * <a href="Definitions.html#TYPEbinop">binop</a> * <a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a></code></code></td>
 
 </tr></table>
 
-<div class="info ">
-<div class="info-desc">
-<p><code class="code">def</code> is the type of a definition. The idea is that we have a list of definitions of both types and values before a final expression that gives the programs result. But we have not implemented user-defined types yet.</p>
-</div>
-</div>
 
 
-<pre><span id="TYPEprog"><span class="keyword">type</span> <code class="type"></code>prog</span> = <code class="type"><a href="Definitions.html#TYPEtyped_expr">typed_expr</a> <a href="Definitions.html#TYPEdef">def</a> list * <a href="Definitions.html#TYPEtyped_expr">typed_expr</a> option</code> </pre>
+<pre><span id="TYPEstate"><span class="keyword">type</span> <code class="type">('a, 's)</code> state</span> = <code class="type">'s -> 'a * 's</code> </pre>
 
-</body></html>
+
+<pre><span id="VALreturn"><span class="keyword">val</span> return</span> : <code class="type">'a -> 'b -> 'a * 'b</code></pre>
+<pre><span id="VAL(>>=)"><span class="keyword">val</span> (&gt;&gt;=)</span> : <code class="type">('a, 's) <a href="Definitions.html#TYPEstate">state</a> -><br>       ('a -> ('b, 's) <a href="Definitions.html#TYPEstate">state</a>) -> 's -> 'b * 's</code></pre>
+<pre><span id="VAL( let* )"><span class="keyword">val</span> ( let* )</span> : <code class="type">('a, 'b) <a href="Definitions.html#TYPEstate">state</a> -><br>       ('a -> ('c, 'b) <a href="Definitions.html#TYPEstate">state</a>) -> 'b -> 'c * 'b</code></pre>
+<pre><span id="VALstate"><span class="keyword">val</span> state</span> : <code class="type">'a -> 'a * 'a</code></pre>
+<pre><span id="VALstate_fmap"><span class="keyword">val</span> state_fmap</span> : <code class="type">('a -> ('b, 'c) <a href="Definitions.html#TYPEstate">state</a>) -><br>       'a list -> ('b Stdlib.List.t, 'c) <a href="Definitions.html#TYPEstate">state</a></code></pre>
+<pre><span id="VALinit_name"><span class="keyword">val</span> init_name</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a></code></pre>
+<pre><span id="VALpull_name"><span class="keyword">val</span> pull_name</span> : <code class="type"><a href="Definitions.html#TYPEvar_name">var_name</a> -> <a href="Definitions.html#TYPEvar_name">var_name</a> * <a href="Definitions.html#TYPEvar_name">var_name</a></code></pre>
+<pre><span id="VALannotate_opt_t_expr"><span class="keyword">val</span> annotate_opt_t_expr</span> : <code class="type"><a href="Definitions.html#TYPEopt_t_expr">opt_t_expr</a> -><br>       (<a href="Definitions.html#TYPEtyped_expr">typed_expr</a>, <a href="Definitions.html#TYPEvar_name">var_name</a>) <a href="Definitions.html#TYPEstate">state</a></code></pre></body></html>

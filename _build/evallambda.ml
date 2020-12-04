@@ -107,6 +107,7 @@ and do_binop op e1 e2 =
     | _ -> failwith (Printf.sprintf "failed in do_binop, given %s %s %s" (string_of_expr e1) (string_of_binop op) (string_of_expr e2))
     )
 
+(** [smallstep e] gives back the expression that [e] (small) steps to. For convenience this function just returns its input if it is given a value.*)
 and smallstep e : (expr, eval_state) state =
 match e with
 | Application (Lambda (e1,x),e2) ->
@@ -163,4 +164,5 @@ and eval' e s =
   if is_val e then e else
   let e', s' = smallstep e s in eval' e' s'
 
-let eval e s : expr = eval' e s 
+(** [eval e] gives the value that [e] evaluates to. Will never terminate if [e] does not terminate. *)
+let eval e : expr = eval' e init_name
