@@ -133,3 +133,10 @@ I am considering modifying this so that you can have it crash with a custom mess
 Although an expression like `proj 2 0 x` may look like a function---`proj`---applied to three arguments, `proj` is built-in syntax whose first two arguments must be integer literals that does not support partial application. So an expression like `proj (2+3) 2 x` is not valid, and neither is `let f = proj 2 0 in f x`.
 
 Similarly, none of the binary infix operations allow partial application, so that `let f = (3+) in ...` is not valid either.
+
+## Known Issues
+
+The language is a toy language so I have not added a lot of obvious features that any real language needs (like support for strings) which is no surprise.
+However, I would still like to create useful errror messages when a program fails to typecheck and allow the user to create custom error messages if there is an unmatched case at runtime, so I may add these fixes in the future.
+
+
