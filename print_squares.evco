@@ -1,0 +1,12 @@
+let ints_up_to n =
+  if n < 0 then Nil else
+  let rec helper k =
+    if k > n then Nil else
+    Cons(k,helper (k+1))
+  in
+  helper 0
+in
+
+let square x = x * x in
+
+map print (map square (ints_up_to 10))

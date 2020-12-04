@@ -1,0 +1,49 @@
+{-- this will compute the chinese remainder theorem map --}
+
+let rec gcd_w_proof n m =
+  if m = 0 then
+  {-- guarantee that we give positive gcd --}
+  if n > 0 then (n,1,0)
+  else ((-n),(-1),0)
+  else
+  let x = n / m in
+  match x with
+  {-- None never happens --}
+  Some x ->
+    let q = proj 2 0 x in
+    let r = proj 2 1 x in
+    let rec_result = gcd_w_proof m r in
+    let g = proj 3 0 rec_result in
+    let s = proj 3 1 rec_result in
+    let t = proj 3 2 rec_result in
+    (g,t,s + (-(t*q)))
+in
+
+{-- compute basis for map Z_m * Z_n -> Z_mn --} 
+let basis n m =
+  if (m = 0) or (n = 0) then None else
+  let gcd_res = gcd_w_proof n m in
+  if (proj 3 0 gcd_res) = 1 then
+  Some (
+    match (1 + ((-(proj 3 2 gcd_res))*m)) % (m * n) with
+    Some y ->
+      match (1 + ((-(proj 3 1 gcd_res))*n)) % (m * n) with
+      Some x ->
+        (x,y)
+  )
+  else None 
+in
+
+{-- chinese_remainder n p m q is:
+  if p and q are relatively prime: Some k where k is the unique integer between 0 and pq - 1 that is equivlant to n mod p and m mod q
+  otherwise None --}
+let chinese_remainder n p m q =
+  let pqbasis = basis p q in
+  match pqbasis with
+  | None x -> None
+  | Some x ->
+  (((proj 2 0 x) * n) + ((proj 2 1 x) * m)) % (p * q)
+in
+
+match chinese_remainder 2 23 1 5 with
+Some x -> print x
