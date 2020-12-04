@@ -16,9 +16,9 @@ When you have a program you want to run, say `my_program.evco`, just run `./main
 This will result in an error message if your program is not well-typed, otherwise it will print the type of your program (the type of its final value, usually `unit`), followed by any output from the program.
 
 You can also run my unit tests by running `make test` which will build the test file and run it.
+You can use `make clean` to delete the `main.native` and `tests.native` executables from your directory.
 
-I have only tested this on ubuntu so you may run into trouble with things not printing newlines if you try running this on a non-unix system.
-
+I have only tested this on ubuntu so you may run into trouble with the makefile and newlines if you try running this on a non-unix system.
 
 ## Example Code
 
@@ -105,8 +105,8 @@ let basis n m =
 in
 
 {-- chinese_remainder n p m q is:
-  if p and q are relatively prime: Some k where k is the unique integer between 0 and pq - 1 that is equivlant to n mod p and m mod q
-  otherwise None --}
+  if p and q are relatively prime: Some k where k is the unique integer between 0 and |pq| - 1 that is equivalent to n mod p and m mod q
+  otherwise: None --}
 let chinese_remainder n p m q =
   let pqbasis = basis p q in
   match pqbasis with
