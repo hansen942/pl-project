@@ -15,8 +15,7 @@ This should produce a file called `main.native`.
 When you have a program you want to run, say `my_program.evco`, just run `./main.native my_program.evco`.
 This will result in an error message if your program is not well-typed, otherwise it will print the type of your program (the type of its final value, usually `unit`), followed by any output from the program.
 
-You can also run my unit tests by running `make test` which will build the test file and run it.
-You can use `make clean` to delete the `main.native` and `tests.native` executables from your directory.
+You can also run my unit tests by running `make test` which will build the test file and run it, use `make clean` to delete the `main.native` and `tests.native` executables from your directory, or use `make doc` do generate documentation for the source code (which may inadvertantly create the `main.native` file when rebuilding the code).
 
 I have only tested this on ubuntu so you may run into trouble with the makefile and newlines if you try running this on a non-unix system.
 
