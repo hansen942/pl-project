@@ -10,6 +10,8 @@ Currently the only typeclass is `printable` of types that can be printed with th
 It is currently not possible for the user to define typeclasses, and after thinking about how this could be accomplished, I have decided that while I intend to add more typeclasses, I probably will not allow users to define typeclasses themselves.
 
 ## How to Build
+You will need Ocaml, ocamlfind, ocamlbuild, and OUnit2.
+
 To build the project, clone the repo and then run `make build` in your local copy.
 This should produce a file called `main.native`.
 
