@@ -6,8 +6,7 @@ It also has limited support for type classes.
 The language is based off the applied lambda calculus extended with let statements.
 It also supports user defined algebraic data types, prenex polymorphism type inference, and I am working to add type classes.
 
-Currently the only typeclass is `printable` of types that can be printed with the built-in print function.
-It is currently not possible for the user to define typeclasses, and after thinking about how this could be accomplished, I have decided that while I intend to add more typeclasses, I probably will not allow users to define typeclasses themselves.
+Currently there are only a handful of type classes: `printable`, `num`, and `ord`.
 
 ## How to Build
 You will need Ocaml, ocamlfind, ocamlbuild, and OUnit2.
@@ -67,7 +66,7 @@ newtype option 'a = None unit | Some 'a in
 ```
 
 Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return `option` types (there are no exceptions in the language).
-Note: there is a current bug I am fixing that prevents this code from being run. I am working on the issue; it did not exist in the last commit but somehow my tests missed it.
+Note: there is a current bug I am fixing that prevents this code from being run. I am working on the issue; it did not exist in the last commit but somehow my other tests missed it.
 
 
 ```
@@ -141,5 +140,6 @@ Similarly, none of the binary infix operations allow partial application, so tha
 
 The language is a toy language so I have not added a lot of obvious features that any real language needs (like support for strings) which is no surprise.
 However, I would still like to create useful errror messages when a program fails to typecheck and allow the user to create custom error messages if there is an unmatched case at runtime, so I may add these fixes in the future.
+Also, there is a current bug that prevents the chinese remainder example above from being run correctly I am working to fix. The last version seems like it was more stable so if you want to run examples you should use it instead. The only difference really is that it does not have the additional type classes.
 
 
