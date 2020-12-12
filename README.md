@@ -67,6 +67,7 @@ newtype option 'a = None unit | Some 'a in
 ```
 
 Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return `option` types (there are no exceptions in the language).
+Note: there is a current bug I am fixing that prevents this code from being run. I am working on the issue; it did not exist in the last commit but somehow my tests missed it.
 
 
 ```
