@@ -24,6 +24,7 @@ type binop =
 (** [expr] is the type of our untyped expressions. It is essentially the applied lambda calculus. *)
 type expr =
 | Int of int
+| Float of float
 | Var of var_name
 | Lambda of expr * var_name
 | Application of expr * expr
@@ -53,6 +54,7 @@ type sugar =
 | Let of var_name * sugar * sugar 
 | Z
 | SInt of int
+| SFloat of float
 | SVar of var_name
 | SLambda of sugar * var_name
 | SApplication of sugar * sugar
@@ -78,6 +80,7 @@ let rec desugar : sugar -> expr = function
 | Let (v,e1,e2) -> Application (Lambda (desugar e2,v), desugar e1)
 | Z -> z
 | SInt n -> Int n
+| SFloat n -> Float n
 | SVar v -> Var v
 | SLambda(e,x) -> Lambda(desugar e,x)
 | SApplication(e1,e2) -> Application(desugar e1,desugar e2)
@@ -95,6 +98,7 @@ let rec desugar : sugar -> expr = function
 
 let rec is_val = function
 | Int _ -> true
+| Float _ -> true
 | Bool _ -> true
 | Lambda _ -> true
 | Unit -> true
@@ -115,6 +119,7 @@ let naive_list_union : 'a list -> 'a list -> 'a list = naive_list_union' []
    if a projection will fail then it doesn't have any free variables*)
 let rec fv : expr -> var_name list = function
 | Int _ -> []
+| Float _ -> []
 | Var v -> [v]
 | Lambda (ebody,arg) -> filter (fun x -> not (x = arg)) (fv ebody)
 | Application (e1,e2) -> naive_list_union (fv e1) (fv e2)
@@ -154,6 +159,7 @@ let string_of_binop : binop -> string = function
 
 let rec string_of_expr : expr -> string = function
 | Int n -> string_of_int n
+| Float n -> string_of_float n
 | Var v -> string_of_var v
 | Bool b -> string_of_bool b
 | Lambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_expr e) 
@@ -180,6 +186,7 @@ let rec string_of_sugar : sugar -> string = function
 | LetRec (v,e1,e2) -> Printf.sprintf "let rec %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
 | Z -> "Z"
 | SInt n -> string_of_int n
+| SFloat n -> string_of_float n
 | SVar v -> string_of_var v
 | SBool b -> string_of_bool b
 | SLambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_sugar e) 
@@ -205,15 +212,24 @@ let rec string_of_sugar : sugar -> string = function
 (* TODO: allow way to construct new type classes, and change this type to include user-defined type classes *)
 type type_class =
 | Printable
+| Number
+| Equality
+| Ordered
+| UserClass of string
 
 let string_of_typeclass = function
 | Printable -> "printable"
+| Number -> "num"
+| Equality -> "eq"
+| Ordered -> "ord"
+| UserClass s -> s
 
 type class_constraints = type_class list
 
 (** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
 type expr_type =
 | Integer
+| Floating
 | Boolean
 | Fun of expr_type * expr_type
 | UnitType
@@ -227,6 +243,7 @@ let rec ftv = function
   let ft2v = ftv t2 in
   naive_list_union ft1v ft2v
 | Integer -> []
+| Floating -> []
 | Boolean -> []
 | UnitType -> []
 | TypeVar v -> [v]
@@ -247,6 +264,7 @@ let rec string_of_type' string_of_var t =
 let string_of_type = string_of_type' string_of_var in
 match t with
 | Integer -> "int"
+| Floating -> "float"
 | Boolean -> "bool"
 | Fun (t1,t2) ->
   let s1 =
@@ -321,6 +339,7 @@ let string_of_class_constrained_expr_type constrained_t =
 (** Elements of [typed_expr] represent expressions which are annotated with types.*)
 type typed_expr =
 | TInt of int
+| TFloat of float
 | TBool of bool
 | TVar of var_name
 | TLambda of typed_expr * var_name * expr_type
@@ -341,6 +360,7 @@ type typed_expr =
 
 let rec string_of_typed_expr : typed_expr -> string = function
 | TInt n -> string_of_int n
+| TFloat n -> string_of_float n
 | TVar v -> string_of_var v
 | TBool b -> string_of_bool b
 | TLambda (e,arg,t) -> Printf.sprintf "λ%s : %s.%s" (string_of_var arg) (string_of_type t) (string_of_typed_expr e) 
@@ -376,6 +396,7 @@ let rec string_of_typed_expr : typed_expr -> string = function
 let rec printable : expr_type -> bool = function
 | UnitType -> true
 | Integer -> true
+| Floating -> true
 | Boolean -> true
 | Fun _ -> false
 | SumType (name,args) -> false
@@ -383,9 +404,32 @@ let rec printable : expr_type -> bool = function
 | Product tlist -> for_all printable tlist
 | TypeVar _ -> false
 
+let rec has_equality : expr_type -> bool = function
+| UnitType -> true
+| Integer -> true
+| Floating -> true
+| Boolean -> true
+| Fun _ -> false
+| SumType (name,args) -> true
+(* we also need to know the actual structure of the sumtype from the context*)
+| Product tlist -> for_all has_equality tlist
+| TypeVar _ -> false
+
+let rec has_order : expr_type -> bool = function
+| UnitType -> false 
+| Integer -> true
+| Floating -> true
+| Boolean -> false 
+| Fun _ -> false
+| SumType (name,args) -> false 
+(* we also need to know the actual structure of the sumtype from the context*)
+| Product tlist -> false (*for_all has_order tlist*)
+| TypeVar _ -> false
+
 (* these types only have optional type annotations *)
 type opt_t_expr = 
 | OInt of int
+| OFloat of float
 | OBool of bool
 | OVar of var_name
 | OLambda of opt_t_expr * var_name * (expr_type option)
@@ -426,6 +470,7 @@ let rec annotate_opt_t_expr oexpr =
   let f = annotate_opt_t_expr in
   match oexpr with
   | OInt n -> return(TInt n)
+  | OFloat n -> return(TFloat n)
   | OBool b -> return(TBool b)
   | OVar v -> return(TVar v)
   | OLambda(e1,v,t_opt) ->
