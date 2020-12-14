@@ -140,6 +140,5 @@ Similarly, none of the binary infix operations allow partial application, so tha
 
 The language is a toy language so I have not added a lot of obvious features that any real language needs (like support for strings) which is no surprise.
 However, I would still like to create useful errror messages when a program fails to typecheck and allow the user to create custom error messages if there is an unmatched case at runtime, so I may add these fixes in the future.
-Also, there is a current bug that prevents the chinese remainder example above from being run correctly I am working to fix. The last version seems like it was more stable so if you want to run examples you should use it instead. The only difference really is that it does not have the additional type classes.
 
 
