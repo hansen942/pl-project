@@ -5,7 +5,6 @@ let rec strip : typed_expr -> sugar = function
 | TLet (v,tv,e1,e2) -> Let (v, strip e1, strip e2)
 | TLetRec (v,tv,e1,e2) -> LetRec (v, strip e1, strip e2)
 | TInt n -> SInt n
-| TFloat n -> SFloat n
 | TBool b -> SBool b
 | TVar v -> SVar v
 | TLambda (e1,v,tv) -> SLambda (strip e1, v)
@@ -77,7 +76,6 @@ let rec sub_vars sub_map t =
   | Integer -> Integer
   | Boolean -> Boolean
   | UnitType -> UnitType
-  | Floating -> Floating
 
 let update_sub sub1 sub2 = map (fun (x,y) -> (x,sub_vars sub2 y)) sub1
 
@@ -173,14 +171,8 @@ let pull_name = function
 
 
 let weakest_class_constraint = function
-  |(TypeVar v,c) -> [(v,[c])]
+  |(TypeVar v,Printable) -> [(v,[Printable])]
   |(t,Printable) -> if printable t then [] else failwith (Printf.sprintf "Cannot solve class constraint %s %s" (string_of_typeclass Printable) (string_of_type t))
-  |(t,Equality) -> if has_equality t then [] else failwith (Printf.sprintf "Cannot solve class constraint %s %s" (string_of_typeclass Equality) (string_of_type t))
-  |(Floating, Number) -> []
-  |(Integer, Number) -> []
-  |(t,Number) -> failwith (Printf.sprintf "Cannot solve class constraint %s %s" (string_of_typeclass Equality) (string_of_type t))
-  |(t, Ordered) -> if has_order t then [] else failwith (Printf.sprintf "Cannot solve class constraint %s %s" (string_of_typeclass Equality) (string_of_type t))
-  |(_,UserClass _) -> failwith "user type classes not implemented yet"
 
 let rec remove_dups = function
 | [] -> []
@@ -210,7 +202,6 @@ let rec gen_new_tvars' t =
   in
   match t with
   | Integer -> return Integer
-  | Floating -> return Floating
   | Boolean -> return Boolean
   | UnitType -> return UnitType
   | TypeVar a ->
@@ -256,35 +247,16 @@ let constrain_monad_gen_tvars_and_sub t known (constraints,fresh_in) =
 (* given binop gives back first arg type, second arg type, output type *)
 let expected_type op =
 match op with
+| Plus -> (Integer,Integer,Integer)
+| Times -> (Integer,Integer,Integer)
+| Subtract -> (Integer,Integer,Integer)
 | Mod -> (Integer,Integer,SumType("option",[Integer]))
 | L -> (Integer,Integer,Boolean)
 | G -> (Integer,Integer,Boolean)
 | And -> (Boolean,Boolean,Boolean)
 | Or -> (Boolean,Boolean,Boolean)
+| Div -> (Integer,Integer,SumType("option",[Product [Integer;Integer]]))
 | _ -> failwith (Printf.sprintf "expected_type does not work on binop %s" (string_of_binop op))
-
-let is_num_op op =
-  match op with
-  | Div -> true
-  | Plus -> true
-  | Times -> true
-  | _ -> false
-
-let is_ord_op op =
-  match op with
-  | L -> true
-  | G -> true
-  | _ -> false
-
-let t_out_num_op op =
-  match op with
-  | Div -> None
-  | Plus -> None 
-  | Times -> None 
-  | L -> Some Boolean
-  | G -> Some Boolean 
-  | _ -> failwith "the function t_out_num_op should only be called on number operations"
-
 
 (* return e2, a venv', and known_classes'
    where each instance of v is changed to a new variable name,
@@ -309,7 +281,6 @@ let rec instance_sub v t known_classes e2  =
     let* e2',venv2,known2 = quick_sub e2 in
     return (TLetRec (v',tv',e1',e2'), combine_maps venv1 venv2, combine_maps known1 known2)
   | TInt _ -> return (e2,[],[])
-  | TFloat _ -> return (e2,[],[])
   | TBool _ -> return (e2,[],[])
   | TLambda (e,arg,targ) ->
     if arg = v then return (e2,[],[]) else
@@ -395,11 +366,8 @@ let rec has_dups = function
 
 
 (* [tcheck'] returns a list of type equality and class constraints for the expression, together with the type of the expression *)
-let rec tcheck' venv known_classes (utenv:utenv) e : (expr_type,constraints * var_name) state = 
-  (*Printf.printf "checking expression %s \n" (string_of_typed_expr e);*)
-  match e with
+let rec tcheck' venv known_classes (utenv:utenv) : typed_expr -> (expr_type,constraints * var_name) state = function
 | TInt _ -> return Integer
-| TFloat _ -> return Floating
 | TBool _ -> return Boolean
 | TVar v -> (match assoc_opt v venv with
              | Some t -> return t
@@ -409,29 +377,12 @@ let rec tcheck' venv known_classes (utenv:utenv) e : (expr_type,constraints * va
   let* t2 = tcheck' venv known_classes utenv e2 in
   match op with
   | Eq ->
-      let* _ = class_constrain t1 Equality () >>= class_constrain t2 Equality in
-      let* _ = constrain t1 t2 () in
-      return Boolean
+    constrain t1 t2 () >>= ignore(return Boolean)
   | _ ->
-    if is_ord_op op then
-      let* _ = class_constrain t1 Ordered () >>= class_constrain t2 Ordered in
-      let* _ = constrain t1 t2 () in
-      return Boolean
-    else
-    if is_num_op op then
-      let* _ = class_constrain t1 Number () >>= class_constrain t2 Number in
-      let* _ = constrain t1 t2 () in
-      if op = Div then
-        return (SumType ("Some", [t1]))
-      else
-        match t_out_num_op op with
-        | Some t -> return t
-        | None -> return t1
-    else
-      let expected1, expected2, out = expected_type op in
-      constrain t1 expected1 () >>=
-      constrain t2 expected2    >>=
-      ignore(return out)
+    let expected1, expected2, out = expected_type op in
+    constrain t1 expected1 () >>=
+    constrain t2 expected2    >>=
+    ignore(return out)
 )
 | TNeg e -> 
   let* t = tcheck' venv known_classes utenv e in
@@ -533,7 +484,7 @@ let rec tcheck' venv known_classes (utenv:utenv) e : (expr_type,constraints * va
 | TProj (e,n,l) ->
   (* note we zero index *)
   if n >= l || n < 0 then failwith "index out of bounds" else
-  if l < 0 then failwith "tuples of negative length are not allowed" else
+  if l < 0 then failwith "projections not defined for tuples of negative length" else
   (* generate a generic type for product of length l and constrain e to have this type *)
   let rec make_gen_prod' so_far_done tlist_so_far l =
     if so_far_done = l then return tlist_so_far else
@@ -545,16 +496,15 @@ let rec tcheck' venv known_classes (utenv:utenv) e : (expr_type,constraints * va
   constrain te gen_prod () >>= ignore(return t_out)
 | TLet (v,tv,e1,e2) ->
     (fun (constraints,fresh) ->
-    (* application_trick just applies the identity function of the user-annotated type to the result, forcing the variable to have the annotated type *)
     let application_trick = (TApplication((TLambda(TVar(Name "x"), Name "x", tv), e1))) in
-    let t1,fresh,var_constraints,sub_map = tcheck_compact venv application_trick fresh known_classes utenv in
-    (* important to do this so that type inference from this let expression will also effect later occurrences of the same type *)
+    let t1,fresh,var_constraints = tcheck_compact venv application_trick fresh known_classes utenv in
     let venv = (v,t1)::venv in
     (* do instance-based type substitution into e2 *)
-    (* for using instance_sub we only care about the class constraints for free type variables of t1, so we compute these constraints first as v_local_class.*)
-    (*let v_local_tvars = ftv t1 in
-    let v_local_class = filter (fun x -> mem (fst x) v_local_tvars) var_constraints in*)
-    let (e2',v_local_venv,v_local_known),fresh = instance_sub v t1 var_constraints e2 fresh in
+    (* for using instance_sub we only care about the class constraints for free type variables
+       of t1, so we compute these constraints first as v_local_class.*)
+    let v_local_tvars = ftv t1 in
+    let v_local_class = filter (fun x -> mem (fst x) v_local_tvars) var_constraints in
+    let (e2',v_local_venv,v_local_known),fresh = instance_sub v t1 v_local_class e2 fresh in
     (* note that the type variables in the domains of these local maps are new, so don't
        appear in the original map, meaning we can blindly concatenate them without checking
        for repeats*)
@@ -562,15 +512,11 @@ let rec tcheck' venv known_classes (utenv:utenv) e : (expr_type,constraints * va
     let new_known : (var_name * (type_class list)) list = known_classes @ v_local_known in
     let expand lst = concat (map (fun (x,lsty) -> map (fun y -> (x,y)) lsty) lst) in
     let constraints = remove_dups(constraints@(map (fun (tvar,tclass) -> TypeClass(TypeVar(tvar),tclass)) (expand new_known))) in
-    let constraints = remove_dups(constraints@(map (fun (v,t) -> Equality(TypeVar(v),t)) sub_map)) in
     (* now we can finally check our new e2' --- we did not increase the number of constraints
        because tcheck_compact will have called unify to eliminate all the new constraints created in e1,
        leaving only the new type class constraints that go into new_known*)
     tcheck' new_venv new_known utenv e2' (constraints,fresh))
 | TLetRec (v,tv,e1,e2) ->
-    let venv = (v,tv)::venv in
-    tcheck' venv known_classes utenv (TLet(v,tv,e1,e2))
-    (*
     (fun (constraints,fresh) ->
     let venv = (v,tv)::venv in
     let application_trick = (TApplication((TLambda(TVar(Name "x"), Name "x", tv), e1))) in
@@ -592,7 +538,6 @@ let rec tcheck' venv known_classes (utenv:utenv) e : (expr_type,constraints * va
        because tcheck_compact will have called unify to eliminate all the new constraints created in e1,
        leaving only the new type class constraints that go into new_known*)
     tcheck' new_venv new_known utenv e2' (constraints,fresh))
-    *)
 | NewSum (name,targs,cons,cont) ->
     (* check that this type name hasn't already been used *)
     if mem name (user_types utenv) then failwith (Printf.sprintf "type name %s already taken" name) else
@@ -626,7 +571,7 @@ and tcheck_compact venv texpr fresh_tvar known_classes utenv =
   let all_class_constraints = new_var_constraints @ empty_class_constraints in
   (*print_endline "all var constrained variables";
   List.iter print_endline ((map (fun (x,y) -> string_of_var x)) all_class_constraints); *)
-  (t_out, next_tvar, all_class_constraints, sub_map)
+  (t_out, next_tvar, all_class_constraints)
 
 (** [tcheck] implements prenex polymorphism and haskell-style type classes
     [name] is the next name available for type variables
@@ -634,7 +579,7 @@ and tcheck_compact venv texpr fresh_tvar known_classes utenv =
 let tcheck expr name : class_constrained_expr_type * var_name =
     (*just call tcheck_compact in order to get the type *)
     match tcheck_compact [] expr name [] [] with
-    | (t,fresh_out,class_out,_) -> ((t,class_out),fresh_out)
+    | (t,fresh_out,class_out) -> ((t,class_out),fresh_out)
 
 
 let add_type expr = function

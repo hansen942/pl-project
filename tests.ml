@@ -1,5 +1,4 @@
 open OUnit2 open Definitions
-open List
 open Typecheck
 
 let init_name = Sub 0
@@ -15,7 +14,6 @@ let run_prog tsugar init_name =
   Evallambda.eval (desugar e)
 
 let quick_get_type tsugar = match (typecheck tsugar init_name) with x,_,_ -> x
-let quick_get_type_w_start tsugar init_name = match (typecheck tsugar init_name) with x,_,_ -> x
 let quick_show_type tsugar = print_endline (string_of_class_constrained_expr_type (quick_get_type tsugar))
 let simple_type tsugar = fst (quick_get_type tsugar) 
 let simple_type_w_start e start = match (typecheck e start) with x,_,_ -> fst x
@@ -104,27 +102,7 @@ let sum_tests = "test suite for sum types" >::: [
   "first_list" >:: (fun _ -> assert_equal (SumType("list",[Integer])) (simple_type_w_start first_list first_list_start));
 ]
 
-let class_permanence,class_permanence_start = tsug_from_string 
-"let f x : 'c -> unit = let a : 'a = print(proj 2 0 x) in print(proj 2 1 x) in f"
-
-let class_test _ =
-  match quick_get_type_w_start class_permanence class_permanence_start with
-  | (t,class_constraints) ->
-      match t with
-      | Fun(Product [TypeVar a;TypeVar b], UnitType) -> (
-        match assoc_opt a class_constraints, assoc_opt b class_constraints with
-        | Some [Printable], Some [Printable] -> true
-        | _, _ -> false
-        
-      )
-      | _ -> false
-
-
-let tclass_tests = "test suite that makes sure that some tricky type class inferences work" >::: [
-  "lets don't lose classes" >:: (fun _ -> assert_equal true (class_test ()))
-]
-
-let type_test_suite = "type tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests;sum_tests;tclass_tests]
+let type_test_suite = "type tests" >::: [simple_tests;poly_tests;let_tests;let_rec_tests;infer_tests;sum_tests]
 
 let fact_5,fact_5_start = tsug_from_string "let rec fact x = if x = 0 then 1 else x * (fact (x + (-1))) in fact 5"
 let app_prod = ( (TApplication( infer_prod, TProd[TInt 5; TBool false])))

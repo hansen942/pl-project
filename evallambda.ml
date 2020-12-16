@@ -28,7 +28,6 @@ let rec sub e e_x x : (expr, eval_state) state =
     return (If (e1',e2',e3'))
   | Bool _ -> return e 
   | Int _ -> return e
-  | Float _ -> return e
   | Lambda (body,arg) ->
   if arg = x then return e else
     if not(mem arg (fv e_x)) then
@@ -82,20 +81,6 @@ and do_binop op e1 e2 =
       let q = n1 / n2 in
       let r = n1 mod n2 in
       Sum("Some",Prod [Int q; Int r])
-    | _ -> failwith "failed in do_binop"
-    )
-  | Float n1, Float n2 -> (
-    match op with
-    | Plus -> Float (n1 +. n2)
-    | Times -> Float (n1 *. n2)
-    | L -> Bool (n1 < n2)
-    | G -> Bool (n1 > n2)
-    | Eq -> Bool (n1 = n2)
-    | Subtract -> Float (n1 -. n2)
-    | Div ->
-      if n2 = 0.0 then Sum("None",Unit) else
-      let q = n1 /. n2 in
-      Sum("Some", Float q)
     | _ -> failwith "failed in do_binop"
     )
   | Bool b1, Bool b2 -> (
@@ -168,7 +153,6 @@ match e with
 | Lambda _ -> return e 
 | Var _ -> return e  
 | Unit -> return e 
-| Float _ -> return e
 | Print e -> fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
 | Sum (c,e) -> let* e' = smallstep e in return (Sum (c,e'))
 | Prod elist ->

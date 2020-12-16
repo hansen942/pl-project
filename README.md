@@ -6,11 +6,10 @@ It also has limited support for type classes.
 The language is based off the applied lambda calculus extended with let statements.
 It also supports user defined algebraic data types, prenex polymorphism type inference, and I am working to add type classes.
 
-Currently there are only a handful of type classes: `printable`, `num`, and `ord`.
+Currently the only typeclass is `printable` of types that can be printed with the built-in print function.
+It is currently not possible for the user to define typeclasses, and after thinking about how this could be accomplished, I have decided that while I intend to add more typeclasses, I probably will not allow users to define typeclasses themselves.
 
 ## How to Build
-You will need Ocaml, ocamlfind, ocamlbuild, and OUnit2.
-
 To build the project, clone the repo and then run `make build` in your local copy.
 This should produce a file called `main.native`.
 
@@ -66,7 +65,6 @@ newtype option 'a = None unit | Some 'a in
 ```
 
 Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return `option` types (there are no exceptions in the language).
-Note: there is a current bug I am fixing that prevents this code from being run. I am working on the issue; it did not exist in the last commit but somehow my other tests missed it.
 
 
 ```
@@ -135,10 +133,3 @@ I am considering modifying this so that you can have it crash with a custom mess
 Although an expression like `proj 2 0 x` may look like a function---`proj`---applied to three arguments, `proj` is built-in syntax whose first two arguments must be integer literals that does not support partial application. So an expression like `proj (2+3) 2 x` is not valid, and neither is `let f = proj 2 0 in f x`.
 
 Similarly, none of the binary infix operations allow partial application, so that `let f = (3+) in ...` is not valid either.
-
-## Known Issues
-
-The language is a toy language so I have not added a lot of obvious features that any real language needs (like support for strings) which is no surprise.
-However, I would still like to create useful errror messages when a program fails to typecheck and allow the user to create custom error messages if there is an unmatched case at runtime, so I may add these fixes in the future.
-
-
