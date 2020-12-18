@@ -21,46 +21,46 @@ rule comment = parse
 and token = parse
 | ws               { token lexbuf }
 | '\n'             { Lexing.new_line lexbuf; token lexbuf }
-| "("              { LPAREN }
-| ")"              { RPAREN }
-| "."              { DOT }
-| ":"              { COLON }
-| "->"             { ARROW }
-| "lambda"         { LAMBDA }
-| "let"            { LET(lexbuf.Lexing.lex_curr_p.Lexing.pos_lnum) }
-| "rec"            { REC }
-| "="              { EQUALS }
-| "in"             { IN }
-| "+"              { PLUS }
-| "-"              { MINUS }
-| "%"              { MOD }
-| "or"             { OR }
-| "and"            { AND }
+| "("              { LPAREN(lexbuf.Lexing.lex_curr_p)}
+| ")"              { RPAREN(lexbuf.Lexing.lex_curr_p) }
+| "."              { DOT(lexbuf.Lexing.lex_curr_p) }
+| ":"              { COLON(lexbuf.Lexing.lex_curr_p) }
+| "->"             { ARROW(lexbuf.Lexing.lex_curr_p) }
+| "lambda"         { LAMBDA(lexbuf.Lexing.lex_curr_p) }
+| "let"            { LET(lexbuf.Lexing.lex_curr_p) }
+| "rec"            { REC(lexbuf.Lexing.lex_curr_p) }
+| "="              { EQUALS(lexbuf.Lexing.lex_curr_p) }
+| "in"             { IN(lexbuf.Lexing.lex_curr_p) }
+| "+"              { PLUS(lexbuf.Lexing.lex_curr_p) }
+| "-"              { MINUS(lexbuf.Lexing.lex_curr_p) }
+| "%"              { MOD(lexbuf.Lexing.lex_curr_p) }
+| "or"             { OR(lexbuf.Lexing.lex_curr_p) }
+| "and"            { AND(lexbuf.Lexing.lex_curr_p) }
 (* starts a comment *)
 | "{--"            { num_in := 1; comment lexbuf }
-| "<"              { LESS }
-| ">"              { GREATER }
-| ","              { COMMA}
-| "/"              { DIV }
-| "*"              { STAR }
-| "true"           { TRUE }
-| "false"          { FALSE }
-| "if"             { IF }
-| "then"           { THEN }
-| "else"           { ELSE }
-| "and"            { AND }
-| "or"             { OR }
-| "not"            { NOT }
-| "match"          { MATCH }
-| "with"           { WITH }
-| "proj"           { PROJ }
-| "newtype"        { NEWTYPE }
-| "|"              { BAR }
-| "()"             { UNIT }
-| tvarid as v      { TVAR(v) }
-| id as v          { VAR(v) }
-| bigid as i       { TNAME(i) }
-| int_pattern as n { INT(int_of_string n) }
+| "<"              { LESS(lexbuf.Lexing.lex_curr_p) }
+| ">"              { GREATER(lexbuf.Lexing.lex_curr_p) }
+| ","              { COMMA(lexbuf.Lexing.lex_curr_p)}
+| "/"              { DIV(lexbuf.Lexing.lex_curr_p) }
+| "*"              { STAR(lexbuf.Lexing.lex_curr_p) }
+| "true"           { TRUE(lexbuf.Lexing.lex_curr_p) }
+| "false"          { FALSE(lexbuf.Lexing.lex_curr_p) }
+| "if"             { IF(lexbuf.Lexing.lex_curr_p) }
+| "then"           { THEN(lexbuf.Lexing.lex_curr_p) }
+| "else"           { ELSE(lexbuf.Lexing.lex_curr_p) }
+| "and"            { AND(lexbuf.Lexing.lex_curr_p) }
+| "or"             { OR(lexbuf.Lexing.lex_curr_p) }
+| "not"            { NOT(lexbuf.Lexing.lex_curr_p) }
+| "match"          { MATCH(lexbuf.Lexing.lex_curr_p) }
+| "with"           { WITH(lexbuf.Lexing.lex_curr_p) }
+| "proj"           { PROJ(lexbuf.Lexing.lex_curr_p) }
+| "newtype"        { NEWTYPE(lexbuf.Lexing.lex_curr_p) }
+| "|"              { BAR(lexbuf.Lexing.lex_curr_p) }
+| "()"             { UNIT(lexbuf.Lexing.lex_curr_p) }
+| tvarid as v      { TVAR(v,(lexbuf.Lexing.lex_curr_p)) }
+| id as v          { VAR(v,(lexbuf.Lexing.lex_curr_p)) }
+| bigid as i       { TNAME(i,(lexbuf.Lexing.lex_curr_p)) }
+| int_pattern as n { INT(int_of_string n,(lexbuf.Lexing.lex_curr_p)) }
 | eof              { EOF }
 
 | _ as c  {

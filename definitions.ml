@@ -483,3 +483,101 @@ let rec annotate_opt_t_expr oexpr =
   | OUnit -> return TUnit
   | ONeg e -> let* e' = f e in return (TNeg e')
   | OBinop (e1,binop,e2) -> let* e1' = f e1 in let* e2' = f e2 in return(TBinop (e1',binop,e2'))
+
+
+type loc_info = Lexing.position
+
+(** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
+type annotation =
+| AInteger of loc_info
+| ABoolean of loc_info
+| AFun of annotation * annotation * loc_info
+| AUnitType of loc_info
+| ATypeVar of var_name * loc_info
+| AProduct of annotation list * loc_info
+| ASumType of user_var_name * (annotation list) * loc_info (* only put type name and parametric types because will not be known until later. Constructors but into a context *)
+
+let loc_of_type : annotation -> loc_info = function
+  | AInteger x -> x
+  | ABoolean x -> x
+  | AFun (_,_,x) -> x
+  | AUnitType x -> x
+  | ATypeVar (_,x) -> x
+  | AProduct (_,x) -> x
+  | ASumType (_,_,x) -> x
+
+type from_parser_expr =
+| FPInt of int * loc_info
+| FPBool of bool * loc_info
+| FPVar of var_name * loc_info
+| FPLambda of from_parser_expr * var_name * (annotation option) * loc_info
+| FPApplication of from_parser_expr * from_parser_expr * loc_info
+| FPIf of from_parser_expr * from_parser_expr * from_parser_expr * loc_info
+| FPUnit of loc_info
+| FPPrint of from_parser_expr * loc_info
+| FPSum of user_var_name * from_parser_expr * loc_info
+| FPProd of from_parser_expr list * loc_info
+| FPMatch of from_parser_expr * ((user_var_name * from_parser_expr) list) * loc_info
+| FPProj of from_parser_expr * int * int * loc_info
+| FPNewSum of user_var_name * (user_var_name list) * (user_var_name * annotation * loc_info) list * from_parser_expr * loc_info
+| FPLet of var_name * (annotation option) * from_parser_expr * from_parser_expr  * loc_info
+| FPLetRec of var_name * (annotation option) * from_parser_expr * from_parser_expr  * loc_info
+| FPNeg of from_parser_expr * loc_info
+| FPBinop of from_parser_expr * binop * from_parser_expr * loc_info
+
+let loc_of_expr : from_parser_expr -> loc_info = function
+  | FPInt (_,x) -> x
+  | FPBool (_,x) -> x
+  | FPVar (_,x) -> x
+  | FPLambda (_,_,_,x) -> x
+  | FPApplication (_,_,x) -> x
+  | FPIf (_,_,_,x) -> x
+  | FPUnit x -> x
+  | FPPrint (_,x) -> x
+  | FPSum (_,_,x) -> x
+  | FPProd (_,x) -> x
+  | FPMatch (_,_,x) -> x
+  | FPProj (_,_,_,x) -> x
+  | FPNewSum (_,_,_,_,x) -> x
+  | FPLet (_,_,_,_,x) -> x
+  | FPLetRec (_,_,_,_,x) -> x
+  | FPNeg (_,x) -> x
+  | FPBinop (_,_,_,x) -> x
+
+type info_expr =
+| IInt of int * loc_info
+| IBool of bool * loc_info
+| IVar of var_name * loc_info
+| ILambda of info_expr * var_name * expr_type * loc_info
+| IApplication of info_expr * info_expr * loc_info
+| IIf of info_expr * info_expr * info_expr * loc_info
+| IUnit of loc_info
+| IPrint of info_expr * loc_info
+| ISum of user_var_name * info_expr * loc_info
+| IProd of info_expr list * loc_info
+| IMatch of info_expr * ((user_var_name * info_expr) list) * loc_info
+| IProj of info_expr * int * int * loc_info
+| INewSum of user_var_name * (user_var_name list) * (user_var_name * annotation * loc_info) list * info_expr * loc_info
+| ILet of var_name * expr_type * info_expr * info_expr  * loc_info
+| ILetRec of var_name * expr_type * info_expr * info_expr  * loc_info
+| INeg of info_expr * loc_info
+| IBinop of info_expr * binop * info_expr * loc_info
+
+let loc = function
+  | IInt (_,x) -> x
+  | IBool (_,x) -> x
+  | IVar (_,x) -> x
+  | ILambda (_,_,_,x) -> x
+  | IApplication (_,_,x) -> x
+  | IIf (_,_,_,x) -> x
+  | IUnit x -> x
+  | IPrint (_,x) -> x
+  | ISum (_,_,x) -> x
+  | IProd (_,x) -> x
+  | IMatch (_,_,x) -> x
+  | IProj (_,_,_,x) -> x
+  | INewSum (_,_,_,_,x) -> x
+  | ILet (_,_,_,_,x) -> x
+  | ILetRec (_,_,_,_,x) -> x
+  | INeg (_,x) -> x
+  | IBinop (_,_,_,x) -> x

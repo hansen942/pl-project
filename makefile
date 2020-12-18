@@ -2,7 +2,7 @@ test:
 	ocamlbuild -use-ocamlfind -pkgs ounit2 tests.native && ./tests.native
 
 build:
-	ocamlbuild main.native
+	ocamlbuild -use-ocamlfind -lib unix main.native
 
 clean:
 	rm -f main.native
