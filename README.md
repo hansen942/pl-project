@@ -3,13 +3,20 @@ The goal of the project is to build a small ml-like functional language that is 
 It also has limited support for type classes.
 
 ## Status
-The language is based off the applied lambda calculus extended with let statements.
-It also supports user defined algebraic data types, prenex polymorphism type inference, and I am working to add type classes.
 
-Currently the only typeclass is `printable` of types that can be printed with the built-in print function.
-It is currently not possible for the user to define typeclasses, and after thinking about how this could be accomplished, I have decided that while I intend to add more typeclasses, I probably will not allow users to define typeclasses themselves.
+After bugs that I was unable to fix before submitting this project for my PL course, I have decided to redesign the system to fix these bugs and make it easier to see what the system does behind the scenes.
+This redesign is also necessary to be able to have real typeclasses that the user can define.
+
+### New Functionality
+
+Redesigning the system will allow me to add displays that allow the typechecker to walk through its reasoning and explain why it typed things a certain way.
+This will make it easier to debug, as well as being informative for someone using the system.
 
 ## How to Build
+
+Note: 
+In the current build this code will not function, you will need to go back to commit `dc4324d` to run the examples until I finish this rebuilding.
+
 To build the project, clone the repo and then run `make build` in your local copy.
 This should produce a file called `main.native`.
 
@@ -21,6 +28,8 @@ You can also run my unit tests by running `make test` which will build the test 
 I have only tested this on ubuntu so you may run into trouble with the makefile and newlines if you try running this on a non-unix system.
 
 ## Example Code
+
+Note: As explained in the "How to Build" section, this version of the project is not functional yet, but this is what it should do.
 
 Lists are defined by the code
 
