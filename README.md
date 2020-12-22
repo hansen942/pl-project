@@ -140,6 +140,14 @@ This is necessary if you ever want to escape the `option` type.
 For instance, in `gcd_w_proof` we would have to have it return an `option` type if we matched the `None` case, but we already checked if `m = 0` so that we know no crash will occur, and skipping this case allows us to return a bare `int` type instead of something of type `option int`.
 I am considering modifying this so that you can have it crash with a custom message, but do not intend to add exceptions to the language, i.e. you will not be able to catch an exception, but just change the message that comes out.
 
+Another example that illustrates some of the other typeclasses is
+```
+let f x y = x = y in f
+```
+
+which typechecks to `∀ eq α. α →  α →  bool`.
+The typeclass `eq` is the typeclass of types where equality is defined, and so this type says that the function `f` expects two arguments of the same type which are of this typeclass `eq`, so that equality is defined on them.
+
 ## Important Notes
 
 Although an expression like `proj 2 0 x` may look like a function---`proj`---applied to three arguments, `proj` is built-in syntax whose first two arguments must be integer literals that does not support partial application. So an expression like `proj (2+3) 2 x` is not valid, and neither is `let f = proj 2 0 in f x`.
