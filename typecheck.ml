@@ -1,11 +1,10 @@
 open Definitions
 open List
 
+(* path of file we are typechecking *)
 let file = ref ""
 
 type explanation = string
-
-let time_step = 1
 
 let debug = ref false
 
@@ -34,8 +33,9 @@ type state = {
   fresh_var : var_name ref;
   user_types : (user_var_name * user_var_name list * (user_var_name * expr_type) list * loc_info) list ref;
   (* needed to keep track of substitutions globally *)
-  sub_so_far : (var_name * expr_type) list ref
-} 
+  sub_so_far : (var_name * expr_type) list ref;
+  tracking : expr_type ref
+}
 
 let init_state fresh = ref {
   type_equalities = ref [];
@@ -48,7 +48,8 @@ let init_state fresh = ref {
     ("option", ["'a"], [("Some", TypeVar((Name "'a"))); ("None", UnitType)], Lexing.dummy_pos);
     ("list", ["'a"], [("Cons", Product[TypeVar((Name "'a"));SumType("list",[TypeVar(Name "'a")])]); ("Nil", UnitType)], Lexing.dummy_pos)
   ];
-  sub_so_far = ref []
+  sub_so_far = ref [];
+  tracking = ref UnitType
 }
 
 (* get a fresh variable *)
@@ -83,6 +84,9 @@ let is_type state name = mem name (user_types state)
 let entry_of_type state name = find (fun (u,_,_,_) -> u = name) !(!state.user_types)
 
 (* HELPERS FOR ADDING AND LOOKING UP CONSTRAINTS*)
+
+let apply_sub_so_far state t =
+  fold_left (fun acc (x,t') -> tsub t' x acc) t !(!state.sub_so_far)
 
 (* add the constraints t1 = t2, saying it was inferred at location loc and the reason it is necessary is described in msg *)
 let add_type_equality state t1 t2 loc msg =
@@ -233,10 +237,10 @@ let rec reduce_typeclass_constraints state =
       (!state).required_classes := tail;
       reduce_typeclass_constraints state
 
-let apply_sub sub state tracking = 
+let apply_sub sub state = 
   match sub with (x,t) ->
-  (* apply to all types in tracking *)
-  let _ = map (fun track -> track := tsub t x !track) tracking in ();
+  (* apply to the type we're tracking *)
+  !state.tracking := tsub t x !(!state.tracking);
   (* first apply the sub to all the elements of the type equality constraints*)
   display_constraints state (Printf.sprintf "applying substitution %s = %s" (string_of_var x) (string_of_type t));
   (!state).type_equalities := map (fun (t1,t2,l,m) -> (tsub t x t1, tsub t x t2,l,m)) !((!state).type_equalities);
@@ -249,7 +253,7 @@ let apply_sub sub state tracking =
 
 
 
-let rec unify state tracking : unit =
+let rec unify state : unit =
   let drop_equality _ = (!state).type_equalities := tl !((!state).type_equalities) in
   match !((!state).type_equalities) with
   | [] -> ()
@@ -258,52 +262,51 @@ let rec unify state tracking : unit =
       | (TypeVar t, t',l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraints %s = %s that was inferred at %s because %s" (string_of_var t) (string_of_type t') (string_of_loc l) m);
           drop_equality ();
-          if (not (List.mem t (ftv t'))) then (apply_sub (t,t') state tracking; reduce_typeclass_constraints state; unify state tracking)
+          if (not (List.mem t (ftv t'))) then (apply_sub (t,t') state; reduce_typeclass_constraints state; unify state)
           else if TypeVar t <> t' then failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t')) else
-          unify state tracking
+          unify state 
           (*else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))*)
       | (t', TypeVar t,l,m) ->(
           display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_var t) (string_of_type t') (string_of_loc l) m);
           drop_equality ();
           if not (List.mem t (ftv t'))
-          then (apply_sub (t,t') state tracking; reduce_typeclass_constraints state; unify state tracking)
+          then (apply_sub (t,t') state; reduce_typeclass_constraints state; unify state)
           else if TypeVar t <> t' then failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t')) else
-            unify state tracking
+            unify state
       )
       | (Fun(t1i,t1o),Fun(t2i,t2o),l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))) (string_of_loc l) m);
           drop_equality ();
           add_type_equality state t1i t2i l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))));
           add_type_equality state t1o t2o l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))));
-          unify state tracking
+          unify state
       | (Product tlist1, Product tlist2,l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)) (string_of_loc l) m);
           if (length tlist1) <> (length tlist2) then failwith (Printf.sprintf "cannot solve the constraint %s = %s because these are products of unequal length" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)));
           drop_equality ();
           let _ = map (fun (t1,t2) -> add_type_equality state t1 t2 l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)))) (zip tlist1 tlist2) in
-          unify state tracking
+          unify state
       | (SumType(type1,targs1), SumType(type2,targs2),l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (SumType(type1,targs1))) (string_of_type (SumType(type2,targs2))) (string_of_loc l) m);
           drop_equality ();
           if type1 <> type2 then failwith (Printf.sprintf "cannot solve the constraint %s = %s" (string_of_type (SumType(type1,targs1))) (string_of_type (SumType(type2,targs2))));
           let _ = map (fun (t1,t2) -> add_type_equality state t1 t2 l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (SumType(type1,targs1))) (string_of_type (SumType(type2,targs2))))) (zip targs1 targs2) in
-          unify state tracking
+          unify state
       | (t,t',l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraints %s = %s that was inferred at %s because %s\n" (string_of_type t) (string_of_type t') (string_of_loc l) m);
-          if t = t' then (drop_equality (); unify state tracking) else failwith (Printf.sprintf "cannot solve constraints %s = %s" (string_of_type t) (string_of_type t'))
+          if t = t' then (drop_equality (); unify state) else failwith (Printf.sprintf "cannot solve constraints %s = %s" (string_of_type t) (string_of_type t'))
   )
           
 
-let reduce state tracking =
-  (* TODO: use sub_so_far to make sure all the constraints are up-to-date*)
-  (* type equalities update *)
+let reduce state =
+  (* apply sub_so_far to all the constraints we have *)
   let _ = map (fun (v,tv) -> (!state).type_equalities := (map (fun (t1,t2,l,m) -> (tsub tv v t1, tsub tv v t2,l,m)) !((!state).type_equalities))) !((!state).sub_so_far) in
-  (* TODO: classes_required update *)
+  !state.tracking := apply_sub_so_far state !(!state.tracking);
+  !state.required_classes := map (fun (t,c,l,m) -> (apply_sub_so_far state t, c, l, m)) !(!state.required_classes);
+  (* these updates are necessary because during typechecking we may have inferred stuff after these constraints were originally made *)
   reduce_typeclass_constraints state;
-  let tracking = map (fun x -> ref x) tracking in
-  unify state tracking;
-  display_constraints state "finished unification";
-  map (fun x -> !x) tracking
+  unify state;
+  display_constraints state "finished unification"
 
 
 (* NOW START THE ACTUAL TYPECHECKING AREA *)
@@ -456,36 +459,34 @@ let rec tcheck (state : state ref) = function
         display_state state l (Printf.sprintf "the variable %s has type %s, which was inferred at %s because %s" (string_of_var x) (string_of_type t) (string_of_loc l) m);
         t
         )
-  | ILet (x,tx,e1,e2,l) ->(
+  | ILet (x,tx,e1,e2,l) ->
       display_state state l (Printf.sprintf "starting on this let statement");
       let t1 = local_scope state e1 in
       add_type_equality state t1 (type_of_annotation tx) l "the annotated and inferred type must be unified";
       (* determine the principal type *)
-      let pt = reduce state [t1] in
-      match pt with [pt] ->
+      !state.tracking := t1;
+      reduce state;
+      let pt = !(!state.tracking) in
       (*NOTE: this push is not necessary because after instance substitution it will not be needed. but for debugging purposes it is kind of nice for all these to be in there *)
       push_var_type state x pt l (Printf.sprintf "%s is bound to an expression of this type in a let statement" (string_of_var x));
+      display_state state l (Printf.sprintf "got back a principal type of %s for the variable %s" (string_of_type pt) (string_of_var x));
       let e2 = instance_sub state pt x e2 in
       tcheck state e2
-      (* this is catching the case that reduce did not return our tracking list properly *)
-      | _ -> failwith "uhhh.." (* this should never happen *)
-      )
-  | ILetRec (x,tx,e1,e2,l) ->(
+  | ILetRec (x,tx,e1,e2,l) ->
       display_state state l (Printf.sprintf "starting on this let statement");
       push_var_type state x (type_of_annotation tx) l (Printf.sprintf "%s is declared as recursive with this type annotation" (string_of_var x));
       let t1 = local_scope state e1 in
       pop_var_binding state;
       add_type_equality state t1 (type_of_annotation tx) l "the annotated and inferred type must be unified";
       (* determine the principal type *)
-      let pt = reduce state [t1] in
-      match pt with [pt] ->
+      !state.tracking := t1;
+      reduce state;
+      let pt = !(!state.tracking) in
       (*NOTE: this push is not necessary because after instance substitution it will not be needed. but for debugging purposes it is kind of nice for all these to be in there *)
       push_var_type state x pt l (Printf.sprintf "%s is bound to an expression of this type in a let statement" (string_of_var x));
+      display_state state l (Printf.sprintf "got back a principal type of %s for the variable %s" (string_of_type pt) (string_of_var x));
       let e2 = instance_sub state pt x e2 in
       tcheck state e2
-      (* this is catching the case that reduce did not return our tracking list properly *)
-      | _ -> failwith "uhhh.." (* this should never happen *)
-      )
   | IUnit l ->
       display_state state l (Printf.sprintf "this is a unit literal, so has type unit");
       UnitType
@@ -594,12 +595,11 @@ let typecheck e fresh =
   let state = init_state fresh in
   let e = (add_print_def state e) in
   let result = tcheck state e in
-  let r = reduce state [result] in
+  !state.tracking := result;
+  reduce state;
   display_state state Lexing.dummy_pos "final state of constraints";
-  match r with
-  | [result] ->
-      let free_tvars = ftv result in
-      let class_constraints = filter (fun x -> mem (fst x) free_tvars) !(!state.known_classes) in
-      let class_constrained_result = (result,class_constraints) in
-      (class_constrained_result,strip (typed_expr_of_info_expr e), get_fresh state)
-  | _ -> failwith "ummm....what!"
+  let result = !(!state.tracking) in
+    let free_tvars = ftv result in
+    let class_constraints = filter (fun x -> mem (fst x) free_tvars) !(!state.known_classes) in
+    let class_constrained_result = (result,class_constraints) in
+    (class_constrained_result,strip (typed_expr_of_info_expr e), get_fresh state)
