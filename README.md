@@ -39,7 +39,9 @@ Lists are defined by the code
 ```
 newtype list 'a = Nil unit | Cons ('a * (list 'a)) in
 ```
-which is included in all files before typechecking, and so is the function `map` which is defined by
+which is included in all files before typechecking.
+
+The function `map` defined by
 
 ```
 {-- return lst with f applied to every entry --}
@@ -49,10 +51,17 @@ let rec map f lst =
   | Cons pair ->   
   Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
 ```
+is not currently automatically included, but I will do this in a bit.
 
 In this code snippet I print out the squares of the integers 0 through 10.
 
 ```evcolang
+let rec map f lst =  
+  match lst with    
+  | Nil x -> Nil    
+  | Cons pair ->   
+  Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
+ in
 let ints_up_to n =
   if n < 0 then Nil else
   let rec helper k =
@@ -68,7 +77,9 @@ map print (map square (ints_up_to 10))
 
 ```
 
-Asking for the type of `map print` will give back `∀ printable α. list α →  list unit` which says that it is a function that takes in a list of printable elements and returns a list of units.
+Asking for the type of `map` will give `∀ α. ∀ β. (β →  α) →  list β →  list α`.
+Now here is an example that shows typeclasses: asking for the type of `map print` will give back `∀ printable α. list α →  list unit`.
+This just says that it is a function that takes in a list of printable elements and returns a list of units.
 This example is included in the repo as `print_squares.evco`.
 
 The option type is also automatically included in every file and has the definition
