@@ -12,6 +12,8 @@ This redesign is also necessary to be able to have real typeclasses that the use
 Redesigning the system will allow me to add displays that allow the typechecker to walk through its reasoning and explain why it typed things a certain way.
 This will make it easier to debug, as well as being informative for someone using the system.
 
+This is currently handled by setting the value of the `debug` reference in the `typecheck.ml` file, so if you do not want to see this / actually just want to typecheck something, you should set this reference to `false`. I will eventually get around to making this a command-line flag.
+
 ## How to Build
 
 Note: 
