@@ -1,44 +1,143 @@
 open Definitions
 open List
 
-let file = ref "print_squares.evco"
+let file = ref "test.evco"
+
+type explanation = string
+
+let time_step = 1
+
+(* SOME GENERAL FUNCTIONS *)
+let rec zip lst1 lst2 =
+  match lst1, lst2 with
+  | h1::t1, h2::t2 -> (h1,h2)::(zip t1 t2)
+  | [], [] -> []
+  | _, _ -> failwith "cannot call zip on lists of unequal length"
 
 (* DEFINE THE STATE OF THE TYPECHECKER AND SOME ASSOCIATED HELPERS *)
 type state = {
-  type_equalities : ((expr_type * expr_type) list) ref;
+  type_equalities : ((expr_type * expr_type * loc_info * explanation) list) ref;
   known_classes : (var_name * (type_class list)) list ref;
-  required_classes : (expr_type * type_class) list ref;
-  variable_types : (var_name * expr_type) list ref;
-  fresh_var : var_name ref
+  required_classes : (expr_type * type_class * loc_info * explanation) list ref;
+  (* variable_types acts like a stack, so when a variable goes out of scope it should be popped *)
+  variable_types : (var_name * (expr_type * loc_info * explanation)) list ref;
+  (* TODO: change tcheck so that it uses depth_var_stack to throw away variables when they go out of scope *)
+  depth_var_stack : int ref;
+  fresh_var : var_name ref;
+  user_types : (user_var_name * user_var_name list * (user_var_name * expr_type) list * loc_info) list ref;
+  (* needed to keep track of substitutions globally *)
+  sub_so_far : (var_name * expr_type) list ref
 } 
 
-let init_state = ref {
+let init_state fresh = ref {
   type_equalities = ref [];
   known_classes = ref [];
   required_classes = ref[];
   variable_types = ref [];
-  fresh_var = ref (Sub 0)
+  depth_var_stack = ref 0;
+  fresh_var = fresh;
+  user_types = ref [
+    ("option", ["'a"], [("Some", TypeVar((Name "'a"))); ("None", UnitType)], Lexing.dummy_pos)
+  ];
+  sub_so_far = ref []
 }
 
-let add_type_equality state t1 t2 =
-  (!state.type_equalities) := (t1,t2) :: !(!state.type_equalities)
+(* get a fresh variable *)
+let get_fresh state =
+  let result = !((!state).fresh_var) in
+  (!state).fresh_var := (match result with Sub n -> Sub (n + 1) | Name _ -> failwith "state corrupted");
+  result
+
+(* HELPERS FOR USER TYPE ENVIRONMENT *)
+
+(* list of all constructors *)
+let cons_list state =
+  fold_left (fun acc (_,_,def_list,_) -> acc@(map fst def_list)) [] !(!state.user_types)
+
+(* is name a constructor *)
+let is_cons state name =
+  mem name (cons_list state)
+
+(* gives the entry in the user_types list
+   associated with the constructor name
+   Raises exception if name is not a constructor*)
+let entry_of_cons state name =
+  find (fun (_,_,def_list,_) -> mem name (map fst def_list)) !(!state.user_types)
+
+let add_type state name type_args def_list loc =
+  !state.user_types := (name,type_args,def_list,loc)::!(!state.user_types)
+
+let user_types state = map (fun (name,_,_,_) -> name) !(!state.user_types)
+
+let is_type state name = mem name (user_types state)
+
+(* HELPERS FOR ADDING AND LOOKING UP CONSTRAINTS*)
+
+(* add the constraints t1 = t2, saying it was inferred at location loc and the reason it is necessary is described in msg *)
+let add_type_equality state t1 t2 loc msg =
+  (!state.type_equalities) := (t1,t2,loc,msg) :: !(!state.type_equalities)
+  
+(* add the constraints t1 = t2, saying it was inferred at location loc and the reason it is necessary is described in msg *)
+let add_type_class_required state t c loc msg =
+  (!state.required_classes) := (t,c,loc,msg) :: !(!state.required_classes)
+
+(* if we know that x (a type variable name) must be of typeclass c, then call this function to store this in state *)
+let add_known state x c =
+  let rec find_curr_classes lst x =
+    match lst with
+    | [] -> (None, [])
+    | (x',c')::t -> if x' = x then (Some c', t) else let h = (x',c') in match (find_curr_classes t x) with (result,t') -> (result,h::t')
+  in
+    match find_curr_classes !((!state).known_classes) x with
+    | (Some already_known, l) -> if List.mem c already_known then ()
+                                 else (!state).known_classes := (x,c::already_known)::l
+    | (None,l) -> (!state).known_classes := (x,[c])::l
+
+(* use to test if we know that x is of typeclass c *)
+let is_known state x c =
+  (!state).known_classes := (x,c) :: !((!state).known_classes)
+
+(* use to return all known typeclasses that x must satisfy *)
+let type_classes_of state x =
+  match assoc_opt x !(!state.known_classes) with
+  | None -> []
+  | Some lst -> lst
+
+(* HELPERS FOR VARIABLE TYPE STACK *)
+
+(* used to push the binding (v_name,t_of_v) onto the variable environment stack with message msg and inf location l *)
+let push_var_type state v_name t_of_v l msg =
+  !state.variable_types := (v_name, (t_of_v, l, msg)) :: !(!state.variable_types);
+  !state.depth_var_stack := !(!state.depth_var_stack) + 1
+
+(* used to remove most recent variable binding *)
+let pop_var_binding state =
+  !state.variable_types := tl !(!state.variable_types);
+  !state.depth_var_stack := !(!state.depth_var_stack) - 1
+
+(* lookup the type of the variable x in the variable environment in state *)
+let lookup state x =
+  let venv = !((!state).variable_types) in
+  assoc_opt x venv
+
 
 (* DEFINE A BUNCH OF STUFF TO PRINT OUT THE STATE OF THE TYPECHECKER *)
 (* change to false to avoid printouts *)
-let debug = true
+let debug = ref true
 
 let display filename location =
   let file = open_in filename in
   let lexbuf = Lexing.from_channel file in
   Visualizer.print_out location lexbuf
 
-let display_buf = Buffer.create 256
+let string_of_loc : Lexing.position -> string = function
+  | {pos_lnum = line; pos_bol = bol; pos_cnum = cnum} -> Printf.sprintf "line %s, position %s" (string_of_int line) (string_of_int (cnum - bol))
 
 let string_of_type_equalities type_equalities =
-  fold_left (fun acc (x,y) -> acc^Printf.sprintf "%s = %s\n" (string_of_type x) (string_of_type y)) "" !type_equalities
+  fold_left (fun acc (x,y,l,msg) -> acc^Printf.sprintf "%s = %s inferred at %s because %s\n" (string_of_type x) (string_of_type y) (string_of_loc l) msg) "" !type_equalities
 
 let string_of_required_classes required_classes =
-  fold_left (fun acc (x,y) -> acc^Printf.sprintf "%s %s\n" (string_of_typeclass y) (string_of_type x)) "" !required_classes
+  fold_left (fun acc (x,y,l,msg) -> acc^Printf.sprintf "%s %s inferred at %s because %s\n" (string_of_typeclass y) (string_of_type x) (string_of_loc l) msg) "" !required_classes
 
 let string_of_known_classes class_constraints =
   let string_of_multi_classes classes =
@@ -50,8 +149,10 @@ let string_of_known_classes class_constraints =
   fold_left (fun acc (x,y) -> acc^Printf.sprintf "%s %s\n" (string_of_multi_classes y) (string_of_var x)) "" !class_constraints
 
 let string_of_venv venv =
-  fold_left (fun acc (x,y) -> acc^Printf.sprintf "%s %s\n" (string_of_var x) (string_of_type y)) "" !venv
+  fold_left (fun acc (x,(y,l,msg)) -> acc^Printf.sprintf "%s : %s inferred at %s because %s\n" (string_of_var x) (string_of_type y) (string_of_loc l) msg) "" !venv
 
+let string_of_sub sub_so_far =
+  fold_left (fun acc (x,t) -> acc^Printf.sprintf "%s = %s\n" (string_of_var x) (string_of_type t)) "" !sub_so_far
 
 let string_of_state state =
   let string_equalities = string_of_type_equalities state.type_equalities in
@@ -59,40 +160,332 @@ let string_of_state state =
   let string_required = string_of_required_classes state.required_classes in
   let string_venv = string_of_venv state.variable_types in
   let string_fresh = string_of_var !(state.fresh_var) in
+  let string_sub = string_of_sub state.sub_so_far in
   let divider = (String.make 80 '=') in
-  Printf.sprintf "Constraints\n%s\n%s%s%sVariable Environment\n%s\n%s%s\nNext Fresh Variable: %s\n" divider string_equalities string_known string_required divider string_venv divider string_fresh
+  Printf.sprintf "Constraint Generation\n%s\n%s%s%s%s\nVariable Environment\n%s%s\nKnown Type Mapping\n%s\n%s\nNext Fresh Variable: %s\n" divider string_equalities string_known string_required divider string_venv divider string_sub divider string_fresh
 
-let reset_display buf =
-  Buffer.reset buf;
-  Buffer.add_string buf "\x1b[2J\x1b[H";
-  Buffer.output_buffer stdout buf;
+let reset_display = fun _ -> 
+  print_string "\x1b[2J\x1b[H";
   flush stdout
 
-let display_state state loc msg =
-  if debug then
-  reset_display display_buf;
-  Buffer.add_string display_buf (string_of_state !state);
-  Buffer.output_buffer stdout display_buf;
-  display (!file) loc;
-  print_newline ();
-  print_string msg
+let wait _ = let _ = input_char stdin in ()
 
-let _ = display_state init_state {pos_fname = !file; pos_lnum = 6; pos_cnum = 3; pos_bol = 0} "This is a test!"
+let display_state state loc msg =
+  if !debug then(
+  reset_display ();
+  print_string (string_of_state !state);
+  display (!file) loc;
+  print_endline msg;
+  flush stdout;
+  wait ()
+  )
+
+(* DEFINE STUFF FOR PRINTING THE CONSTRAINTS AND STATE OF UNIFICATION *)
+
+
+let display_constraints state msg =
+  if !debug then (
+  reset_display ();
+  let string_equalities = string_of_type_equalities (!state).type_equalities in
+  let string_known = string_of_known_classes (!state).known_classes in
+  let string_required = string_of_required_classes (!state).required_classes in
+  let string_fresh = string_of_var !((!state).fresh_var) in
+  let sub_string = string_of_sub (!state).sub_so_far in
+  let divider = (String.make 80 '=') in
+  Printf.printf "Unification\n%s\nType Equalities\n%s%s\nTypeclass Constraints\n%sKnown Typeclasses\n%s\n%s\nKnown Mapping\n%s\n%s\nNext Fresh Variable: %s\n" divider string_equalities divider string_required string_known divider sub_string divider string_fresh;
+  print_string msg;
+  flush stdout;
+  wait ()
+  )
+
+(* UNIFICATION *)
+
+let rec add_weakest_var_classes state : expr_type * type_class -> unit = function
+  | (TypeVar(v), c) -> add_known state v c
+  | (t,Printable) -> if printable t then () else failwith (Printf.sprintf "cannot infer printable %s" (string_of_type t))
+  | (Integer,Ordered) -> () 
+  | (t,Ordered) -> failwith (Printf.sprintf "%s is not in the ord typeclass" (string_of_type t))
+  | (t,Equality) ->(
+      match t with
+      | Fun(_,_) -> failwith (Printf.sprintf "%s is not in the eq typeclass" (string_of_type t))
+      | SumType(_,_) -> failwith (Printf.sprintf "%s is not in the eq typeclass" (string_of_type t))
+      | Product tlist -> let _ = map (fun x -> add_weakest_var_classes state (x,Equality)) tlist in ()
+      | _ -> ()
+    )
+
+let rec reduce_typeclass_constraints state =
+  match !((!state).required_classes) with
+  | [] -> ()
+  | (t,c,l,m)::tail ->
+      display_constraints state (Printf.sprintf "dealing with the constraint %s %s that was inferred at %s because %s" (string_of_typeclass c) (string_of_type t) (string_of_loc l) m);
+      add_weakest_var_classes state (t,c);
+      (!state).required_classes := tail;
+      reduce_typeclass_constraints state
+
+let apply_sub sub state tracking = 
+  match sub with (x,t) ->
+  (* apply to all types in tracking *)
+  let _ = map (fun track -> track := tsub t x !track) tracking in ();
+  (* first apply the sub to all the elements of the type equality constraints*)
+  display_constraints state (Printf.sprintf "applying substitution %s = %s" (string_of_var x) (string_of_type t));
+  (!state).type_equalities := map (fun (t1,t2,l,m) -> (tsub t x t1, tsub t x t2,l,m)) !((!state).type_equalities);
+  (* if we have a class cosntraint on x then add the required class constraint to t *)
+  (match assoc_opt x !((!state).known_classes) with
+  | Some c -> let new_required = map (fun c -> (t,c,Lexing.dummy_pos,"we did a substitution")) c in (!state).required_classes := !((!state).required_classes) @ new_required
+  | None -> ());
+  (* update sub_so_far *)
+  (!state).sub_so_far := (x,t)::(map (fun(v,tv) -> (v, tsub t x tv)) !((!state).sub_so_far))
+
+
+
+let rec unify state tracking : unit =
+  let drop_equality _ = (!state).type_equalities := tl !((!state).type_equalities) in
+  match !((!state).type_equalities) with
+  | [] -> ()
+  | h::_->(
+      match h with
+      | (TypeVar t, t',l,m) ->
+          display_constraints state (Printf.sprintf "dealing with the constraints %s = %s that was inferred at %s because %s" (string_of_var t) (string_of_type t') (string_of_loc l) m);
+          if (not (List.mem t (ftv t'))) then (apply_sub (t,t') state tracking; drop_equality (); reduce_typeclass_constraints state; unify state tracking)
+          else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))
+          (*else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))*)
+      | (t', TypeVar t,l,m) ->(
+          display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_var t) (string_of_type t') (string_of_loc l) m);
+          if not (List.mem t (ftv t'))
+          then (apply_sub (t,t') state tracking; drop_equality (); reduce_typeclass_constraints state; unify state tracking)
+          else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))
+      )
+      | (Fun(t1i,t1o),Fun(t2i,t2o),l,m) ->
+          display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))) (string_of_loc l) m);
+          drop_equality ();
+          add_type_equality state t1i t2i l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))));
+          add_type_equality state t1o t2o l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))));
+          unify state tracking
+      | (t,t',l,m) ->
+          display_constraints state (Printf.sprintf "dealing with the constraints %s = %s that was inferred at %s because %s\n" (string_of_type t) (string_of_type t') (string_of_loc l) m);
+          if t = t' then (drop_equality (); unify state tracking) else failwith (Printf.sprintf "cannot solve constraints %s = %s" (string_of_type t) (string_of_type t'))
+  )
+          
+
+let reduce state tracking =
+  (* TODO: use sub_so_far to make sure all the constraints are up-to-date*)
+  (* type equalities update *)
+  let _ = map (fun (v,tv) -> (!state).type_equalities := (map (fun (t1,t2,l,m) -> (tsub tv v t1, tsub tv v t2,l,m)) !((!state).type_equalities))) !((!state).sub_so_far) in
+  (* TODO: classes_required update *)
+  reduce_typeclass_constraints state;
+  let tracking = map (fun x -> ref x) tracking in
+  unify state tracking;
+  display_constraints state "finished unification";
+  map (fun x -> !x) tracking
+
 
 (* NOW START THE ACTUAL TYPECHECKING AREA *)
 
-let rec tcheck (state : state ref) = function
-  | IBinop (e1,op,e2,l) ->(
-      match op with
-      | Plus ->
-          let t1 = tcheck state e1 in
-          let t2 = tcheck state e2 in
-          add_type_equality state t1 Integer;
-          add_type_equality state t2 Integer;
-          display_state state l "Added constraints that these two terms are integers.";
-          Integer
-      | _ -> failwith "unimplemented"
-    )
+let rec gen_new_tvars state t = 
+  match t with
+  | Integer -> Integer 
+  | Boolean -> Boolean
+  | UnitType -> UnitType
+  | Fun (a1,a2) -> Fun(gen_new_tvars state a1, gen_new_tvars state a2)
+  | Product (alist) -> Product (map (gen_new_tvars state) alist)
+  | SumType (name,alist) -> SumType(name, map (gen_new_tvars state) alist)
+  | TypeVar (x) ->
+      let fresh = get_fresh state in
+      let required = type_classes_of state x in
+      (* fresh needs to have same required typeclasses as x did *)
+      let _ = map (fun c -> add_type_class_required state (TypeVar fresh) c Lexing.dummy_pos (Printf.sprintf "%s is a clone of %s" (string_of_var fresh) (string_of_var x))) required in
+      TypeVar (fresh)
+
+let rec instance_sub state t x e =
+  let r = instance_sub state t x in
+  match e with
+  | IInt (_,_) -> e
+  | IBool (_,_) -> e
+  | IVar (v,l) ->
+      if v = x then
+        let fresh_var = get_fresh state in
+        let fresh_t = gen_new_tvars state t in
+        push_var_type state fresh_var fresh_t Lexing.dummy_pos (Printf.sprintf "%s is a clone of %s for polymorphism" (string_of_var fresh_var) (string_of_var x));
+        IVar(fresh_var,l)
+      else
+        e
+  | ILambda (e,x,a,l) -> ILambda (r e, x, a, l)
+  | IApplication (e1,e2,l) -> IApplication(r e1, r e2, l)
+  | IIf(e1,e2,e3,l) -> IIf(r e1, r e2, r e3, l)
+  | IUnit _ -> e
+  | IPrint (e,l) -> IPrint (r e, l)
+  | ISum (u,e,l) -> ISum(u,r e, l)
+  | IProd (elist, l) -> IProd (map r elist, l)
+  | IMatch (e, cases, l) -> IMatch (r e, map (fun (case,handler) -> (case, r handler)) cases, l)
+  | IProj(e,n,i,l) -> IProj(r e, n, i, l)
+  | INewSum (u, targs, defs, cont, l) -> INewSum (u, targs, defs, r cont, l)
+  | ILet (x',a,e1,e2,l) ->
+      if x' = x then
+        ILet(x',a,r e1, e2, l)
+      else
+        ILet(x',a,r e1, r e2, l)
+  | ILetRec (x',a,e1,e2,l) ->
+      if x' = x then
+        e
+      else
+        ILetRec (x', a, r e1, r e2, l)
+  | INeg (e,l) -> INeg (r e, l)
+  | IBinop (e1,b,e2,l) -> IBinop(r e1, b, r e2, l)
+
+
+let binop_check state t1 b t2 l =
+  match b with
+  | Plus -> 
+    display_state state l "this is a sum, so its args should be ints, returning type int";
+    add_type_equality state t1 Integer l "appears in an addition";
+    add_type_equality state t2 Integer l "appears in an addition";
+    Integer
+  | Times ->
+    display_state state l "this is a multiplication, so its args should be ints, returning type int";
+    add_type_equality state t1 Integer l "appears in an addition";
+    add_type_equality state t2 Integer l "appears in an addition";
+    Integer
+  | Subtract ->
+    display_state state l "this is a subtraction, so its args should be ints, returning type int";
+    add_type_equality state t1 Integer l "appears in an addition";
+    add_type_equality state t2 Integer l "appears in an addition";
+    Integer
+  | Mod ->
+    display_state state l "this is the mod operator so should have ints as args, returns type option int";
+    add_type_equality state t1 Integer l "appears in a mod operation";
+    add_type_equality state t2 Integer l "appears in a mod operation";
+    SumType("option", [Integer])
+  | L ->
+    display_state state l "this is the < operator so should have ordered types as args, returns type bool";
+    add_type_class_required state t1 Ordered l "appears in < operation";
+    add_type_class_required state t2 Ordered l "appears in < operation";
+    Boolean 
+  | G ->
+    display_state state l "this is the > operator so should have ordered types as args, returns type bool";
+    add_type_class_required state t1 Ordered l "appears in > operation";
+    add_type_class_required state t2 Ordered l "appears in > operation";
+    Boolean 
+  | Eq ->
+    display_state state l "this is the = operator so should have eq types as args, returns type bool";
+    add_type_class_required state t1 Equality l "appears in = operation";
+    add_type_class_required state t2 Equality l "appears in = operation";
+    Boolean 
   | _ -> failwith "unimplemented"
 
-let typecheck _ = failwith "unimplemented"
+let rec tcheck (state : state ref) = function
+  | IBinop (e1,op,e2,l) ->
+      let t1 = local_scope state e1 in
+      let t2 = local_scope state e2 in
+      binop_check state t1 op t2 l
+  | IInt (_,l) ->
+      display_state state l "this is an integer literal, so has type int";
+      Integer
+  | IBool (_,l) ->
+      display_state state l "this is a boolean literal, so has type bool";
+      Boolean
+  | IIf (e1,e2,e3,l) ->
+      display_state state l "this is an if statement, so will make sure the guard is a bool and the two branches have equal type";
+      let t1 = local_scope state e1 in
+      let t2 = local_scope state e2 in
+      let t3 = local_scope state e3 in
+      add_type_equality state t1 Boolean l "appears as a guard in if statement";
+      add_type_equality state t2 t3 l "these are types of two branches of if statement";
+      t2
+  | IApplication (e1,e2,l) ->
+      display_state state l "this is an application, so will make sure the first expression is a function that can be applied to the second";
+      let out_type = TypeVar(get_fresh state) in
+      let t1 = local_scope state e1 in
+      let t2 = local_scope state e2 in
+      add_type_equality state t1 (Fun(t2,out_type)) l "this must be a function that takes in this type, output type was generated fresh";
+      out_type
+  | ILambda (e_body, arg_x, arg_t, l) ->
+      display_state state l (Printf.sprintf "this is a function taking in the argument %s of type %s" (string_of_var arg_x) (string_of_annotation arg_t));
+      push_var_type state arg_x (type_of_annotation arg_t) l (Printf.sprintf "the argument %s is bound to the type %s in the function definition" (string_of_var arg_x) (string_of_annotation arg_t));
+      let t_body = local_scope state e_body in
+      Fun(type_of_annotation arg_t,t_body)
+  | IVar (x,l) ->(
+      match lookup state x with
+      | None -> display_state state l (Printf.sprintf "the variable %s is unbound" (string_of_var x)); failwith "unbound variable"
+      | Some (t,l,m) ->
+        display_state state l (Printf.sprintf "the variable %s has type %s, which was inferred at %s because %s" (string_of_var x) (string_of_type t) (string_of_loc l) m);
+        t
+        )
+  | ILet (x,tx,e1,e2,l) ->(
+      display_state state l (Printf.sprintf "starting on this let statement");
+      let t1 = local_scope state e1 in
+      add_type_equality state t1 (type_of_annotation tx) l "the annotated and inferred type must be unified";
+      (* determine the principal type *)
+      let pt = reduce state [t1] in
+      match pt with [pt] ->
+      (*NOTE: this push is not necessary because after instance substitution it will not be needed. but for debugging purposes it is kind of nice for all these to be in there *)
+      push_var_type state x pt l (Printf.sprintf "%s is bound to an expression of this type in a let statement" (string_of_var x));
+      let e2 = instance_sub state pt x e2 in
+      tcheck state e2
+      (* this is catching the case that reduce did not return our tracking list properly *)
+      | _ -> failwith "uhhh.." (* this should never happen *)
+      )
+  | IUnit l ->
+      display_state state l (Printf.sprintf "this is a unit literal, so has type unit");
+      UnitType
+  | ISum (u,e,l) -> 
+      display_state state l (Printf.sprintf "this is a sumtype built with constructor %s" u);
+      if not (is_cons state u) then failwith (Printf.sprintf "the constructor %s is not defined" u);
+      let t = local_scope state e in
+      (* lookup type associated with constructor u *)
+      let t_name,t_args,def_list,l_def = entry_of_cons state u in
+      let our_type = snd (find (fun (cons,_) -> cons = u) def_list) in
+      (* generate new type variables for the targs of this type *)
+      let fresh_t_args = map (fun _ -> get_fresh state) t_args in
+      (* substitute into the type associated with constructor u *)
+      let our_type = fold_left (fun acc (concrete,placeholder) -> tsub (TypeVar concrete) (Name placeholder) acc) our_type (zip fresh_t_args t_args) in
+      (* add type equality between this type and t *)
+      add_type_equality state t our_type l (Printf.sprintf "the expression of type %s is used as an argument to the constructor %s defined at %s which expects the type %s" (string_of_type t) u (string_of_loc l_def) (string_of_type our_type));
+      (* return type that we found with the new type variables *)
+      SumType(t_name, map (fun x -> TypeVar x) fresh_t_args)
+  | INewSum (u,targs,def_list,cont,l) ->
+      display_state state l (Printf.sprintf "this is a definition of a new type %s" u);
+      if is_type state u then failwith (Printf.sprintf "the type %s already exists, and cannot be re-defined here" u);
+      (
+      match find_opt (fun x -> is_cons state x) (map (fun (x,_,_) -> x) def_list) with
+        | Some cons -> failwith (Printf.sprintf "the constructor %s already exists, and cannot be re-defined here" cons)
+        | _ ->
+      let def_list = map (fun (x,y,_) -> (x,type_of_annotation y)) def_list in
+      add_type state u targs def_list l;
+      tcheck state cont
+      )
+  | IPrint (e,l) ->
+      let t = local_scope state e in
+      add_type_class_required state t Printable l "print is applied to it";
+      UnitType
+  | _ -> failwith "unimplemented"
+
+and local_scope state e =
+  let rec help n =
+    if n <= 0 then ()
+    else (pop_var_binding state; help (n-1))
+  in
+  let init_stack_size = !(!state.depth_var_stack) in
+  let result = tcheck state e in
+  let num_local_bindings = !(!state.depth_var_stack) - init_stack_size in
+  (if num_local_bindings < 0 then print_string "checkout local_scope function, somehow got negative number of local variable bindings"
+  else help num_local_bindings);
+  result
+
+(* EXPORTED TYPECHECK FUNCTION*)
+let add_print_def state e = 
+  let fresh1 = get_fresh state in
+  let fresh2 = get_fresh state in
+  (ILet(Name "print", ATypeVar(fresh1,Lexing.dummy_pos), ILambda(IPrint (IVar (Name "x",Lexing.dummy_pos),Lexing.dummy_pos), Name "x", ATypeVar(fresh2,Lexing.dummy_pos), Lexing.dummy_pos),e,Lexing.dummy_pos))
+
+let typecheck e fresh =
+  let state = init_state fresh in
+  let result = tcheck state (add_print_def state e) in
+  let r = reduce state [result] in
+  display_state state Lexing.dummy_pos "final state of constraints";
+  match r with
+  | [result] ->
+      let free_tvars = ftv result in
+      let class_constraints = filter (fun x -> mem (fst x) free_tvars) !(!state.known_classes) in
+      let class_constrained_result = (result,class_constraints) in
+      (class_constrained_result,e,get_fresh state)
+  | _ -> failwith "ummm....what!"

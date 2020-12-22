@@ -5,8 +5,8 @@
   open Definitions
 %}
 
-%token <string * Lexing.position> VAR TNAME TVAR
-%token <int * Lexing.position> INT
+%token <string * Lexing.position > VAR TNAME TVAR
+%token <int * Lexing.position > INT
 %token <Lexing.position> LET EQUALS IN REC NEWTYPE PLUS MINUS LESS GREATER DIV LAMBDA ARROW LPAREN RPAREN DOT COLON LBRACE RBRACE IF THEN ELSE TRUE FALSE AND OR NOT UNIT MOD MATCH WITH BAR PROJ COMMA STAR COMMENTSTART COMMENTEND
 %token EOF 
 

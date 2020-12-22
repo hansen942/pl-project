@@ -2,15 +2,16 @@ open Definitions
 open Typecheck
 open Evallambda
 
-let init_name = Sub 0
-
 let filename = ref ""
 
 (** [run_prog] first typechecks its input, then evaluates it*)
-let run_prog tsugar init_name =
-  failwith "unimplemented"
+let run_prog tsugar fresh =
+  let t,_,_ = typecheck tsugar fresh in
+  print_newline ();
+  print_endline "finished running typechecker!";
+  Printf.printf "got type %s" (string_of_class_constrained_expr_type t)
+
   (*
-  let t,e,fresh = typecheck tsugar init_name in
   print_endline (string_of_class_constrained_expr_type t);
   eval (desugar e)
   *)
@@ -38,7 +39,9 @@ let _ =
       Format.printf "Syntax error at %d:%d\n"
         pos.Lexing.pos_lnum (pos.Lexing.pos_cnum - pos.Lexing.pos_bol);
       exit 1 in
+  let fresh = ref (Sub 0) in
+  let filled_in = info_of_from_parser fresh e in
+  run_prog filled_in fresh
   (* fill in empty annotations, and for now just print expression *)
   (*match annotate_opt_t_expr e init_name with
   (tsug, name) -> run_prog tsug name*)
-  ()

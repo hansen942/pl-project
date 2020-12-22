@@ -1,6 +1,8 @@
 open List
 (** This file contains all the shared types that the other modules need and also some functions that allow these types to be displayed.*)
 
+let (>>) f g = fun x -> g (f x)
+
 (** users write programs where identifiers are strings *)
 type user_var_name = string
 
@@ -21,8 +23,10 @@ type binop =
 | Eq
 | Div
 
+type tclass_dict = (var_name * expr) list
+
 (** [expr] is the type of our untyped expressions. It is essentially the applied lambda calculus. *)
-type expr =
+and expr =
 | Int of int
 | Var of var_name
 | Lambda of expr * var_name
@@ -37,6 +41,7 @@ type expr =
 | Proj of expr * int
 | Neg of expr
 | Binop of expr * binop * expr
+| TClass of tclass_dict * expr
 (*| Lazy of expr ref*)
 
 (*module Compare_VName : Map.OrderedType = struct
@@ -134,10 +139,10 @@ let rec fv : expr -> var_name list = function
 | Neg e -> fv e
 | Binop (e1,binop,e2) -> naive_list_union (fv e1) (fv e2)
 
-
+(* old system used ⓥ  symbol to demark internal variables, but this was not always printed correctly*)
 let string_of_var v : string =
 match v with
-| Sub x -> Printf.sprintf "ⓥ %n" x
+| Sub x -> Printf.sprintf "V%n" x
 | Name v -> v
 
 let string_of_binop : binop -> string = function
@@ -204,10 +209,14 @@ let rec string_of_sugar : sugar -> string = function
 (** [type_class] serves the purpose of telling what generic types can have generic operations done on them *)
 (* TODO: allow way to construct new type classes, and change this type to include user-defined type classes *)
 type type_class =
+| Ordered
 | Printable
+| Equality
 
 let string_of_typeclass = function
 | Printable -> "printable"
+| Ordered -> "ord"
+| Equality -> "eq"
 
 type class_constraints = type_class list
 
@@ -489,13 +498,14 @@ type loc_info = Lexing.position
 
 (** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
 type annotation =
-| AInteger of loc_info
-| ABoolean of loc_info
-| AFun of annotation * annotation * loc_info
-| AUnitType of loc_info
-| ATypeVar of var_name * loc_info
-| AProduct of annotation list * loc_info
-| ASumType of user_var_name * (annotation list) * loc_info (* only put type name and parametric types because will not be known until later. Constructors but into a context *)
+| AInteger of loc_info 
+| ABoolean of loc_info 
+| AFun of annotation * annotation * loc_info 
+| AUnitType of loc_info 
+| ATypeVar of var_name * loc_info 
+| AProduct of annotation list * loc_info 
+| ASumType of user_var_name * (annotation list) * loc_info 
+(* only put type name and parametric types because will not be known until later. Constructors but into a context *)
 
 let loc_of_type : annotation -> loc_info = function
   | AInteger x -> x
@@ -548,7 +558,7 @@ type info_expr =
 | IInt of int * loc_info
 | IBool of bool * loc_info
 | IVar of var_name * loc_info
-| ILambda of info_expr * var_name * expr_type * loc_info
+| ILambda of info_expr * var_name * annotation * loc_info
 | IApplication of info_expr * info_expr * loc_info
 | IIf of info_expr * info_expr * info_expr * loc_info
 | IUnit of loc_info
@@ -558,8 +568,8 @@ type info_expr =
 | IMatch of info_expr * ((user_var_name * info_expr) list) * loc_info
 | IProj of info_expr * int * int * loc_info
 | INewSum of user_var_name * (user_var_name list) * (user_var_name * annotation * loc_info) list * info_expr * loc_info
-| ILet of var_name * expr_type * info_expr * info_expr  * loc_info
-| ILetRec of var_name * expr_type * info_expr * info_expr  * loc_info
+| ILet of var_name * annotation * info_expr * info_expr  * loc_info
+| ILetRec of var_name * annotation * info_expr * info_expr  * loc_info
 | INeg of info_expr * loc_info
 | IBinop of info_expr * binop * info_expr * loc_info
 
@@ -581,3 +591,65 @@ let loc = function
   | ILetRec (_,_,_,_,x) -> x
   | INeg (_,x) -> x
   | IBinop (_,_,_,x) -> x
+
+let pull fresh =
+  let result = !fresh in
+  fresh := (match !fresh with Sub x -> Sub (x+1));
+  result
+
+let rec info_of_from_parser fresh e = 
+  let r = info_of_from_parser fresh in
+  let fill_t loc = function
+    | Some t -> t
+    | None -> ATypeVar(pull fresh, loc)
+  in
+  match e with
+  | FPBinop (e1,b,e2,l) -> IBinop (r e1, b, r e2,l)
+  | FPInt (n,l) -> IInt (n,l)
+  | FPBool (b,l) -> IBool (b,l)
+  | FPVar (v,l) -> IVar (v,l)
+  | FPLambda (e1,v,a,l) -> ILambda(r e1,v,fill_t l a,l)
+  | FPApplication (e1,e2,l) -> IApplication(r e1, r e2, l)
+  | FPIf (e1,e2,e3,l) -> IIf(r e1, r e2, r e3, l)
+  | FPUnit l -> IUnit l
+  | FPPrint (e,l) -> IPrint (r e, l)
+  | FPSum (u,e,l) -> ISum (u, r e, l)
+  | FPProd (elist, l) -> IProd (map r elist, l)
+  | FPMatch (e, cases, l) -> IMatch (r e, map (fun (v,e) -> v,r e) cases, l)
+  | FPProj (e,n,i,l) -> IProj (r e, n, i, l)
+  | FPNewSum (u,targs,def,cont,l) -> INewSum (u,targs,def,r cont,l)
+  | FPLet (v,a,e1,e2,l) -> ILet (v,fill_t l a, r e1, r e2, l)
+  | FPLetRec (v,a,e1,e2,l) -> ILetRec (v,fill_t l a, r e1, r e2, l)
+  | FPNeg (e,l) -> INeg (r e, l)
+
+let rec type_of_annotation = function
+  | AInteger _ -> Integer
+  | ABoolean _ -> Boolean
+  | AUnitType _ -> UnitType
+  | AProduct (alist,_) -> Product (map type_of_annotation alist)
+  | ASumType (u,alist,_) -> SumType (u,map type_of_annotation alist)
+  | ATypeVar (v,_) -> TypeVar v
+
+let string_of_annotation x = string_of_type (type_of_annotation x)
+
+let rec typed_expr_of_info_expr e = 
+  let r = typed_expr_of_info_expr in
+  match e with
+  | IInt (n,_) -> TInt n
+  | IBool (b,_) -> TBool b
+  | IVar (v,_) -> TVar v
+  | ILambda (e1,v,a,_) -> TLambda (r e1, v, type_of_annotation a)
+  | IApplication(e1,e2,_) -> TApplication(r e1, r e2)
+  | IIf(e1,e2,e3,_) -> TIf(r e1, r e2, r e3)
+  | IUnit _ -> TUnit
+  | IPrint (e,_) -> TPrint (r e)
+  | ISum (u,e,_) -> TSum (u, r e)
+  | IProd (elist, _) -> TProd (map r elist)
+  | IMatch (e,cases,_) -> TMatch(r e, map (fun (v,e) -> v,r e) cases)
+  | IProj (e,n,i,_) -> TProj (r e, n, i)
+  | INewSum(u,targs,def,cont,_) -> NewSum(u,targs,map (fun (name,def,_) -> (name, type_of_annotation def)) def,r cont)
+  | ILet(v,a,e1,e2,_) -> TLet(v,type_of_annotation a, r e1, r e2)
+  | ILetRec(v,a,e1,e2,_) -> TLet(v,type_of_annotation a, r e1, r e2)
+  | INeg(e,_) -> TNeg (r e)
+
+let string_of_info = typed_expr_of_info_expr >> string_of_typed_expr
