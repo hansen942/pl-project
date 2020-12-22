@@ -34,8 +34,6 @@ When it does this, it will block execution; you need to press enter to allow the
 
 ## Example Code
 
-Note: As explained in the "How to Build" section, this version of the project is not functional yet, but this is what it should do.
-
 Lists are defined by the code
 
 ```
@@ -147,3 +145,6 @@ I am considering modifying this so that you can have it crash with a custom mess
 Although an expression like `proj 2 0 x` may look like a function---`proj`---applied to three arguments, `proj` is built-in syntax whose first two arguments must be integer literals that does not support partial application. So an expression like `proj (2+3) 2 x` is not valid, and neither is `let f = proj 2 0 in f x`.
 
 Similarly, none of the binary infix operations allow partial application, so that `let f = (3+) in ...` is not valid either.
+
+Currently there are no checks done when you define a new type, so that if you define a new type with a constructor that expects a value of another type that has not yet been defined, the typechecker will not complain.
+This allows you to do recursive/mutually recursive type definitions, but also means that you can define types with constructors that expect types that do not (yet) exist, so it is impossible to use these constructors until you define those types.
