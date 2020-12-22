@@ -4,10 +4,8 @@ It also has limited support for type classes.
 
 ## Status
 
-After bugs that I was unable to fix before submitting this project for my PL course, I have decided to redesign the system to fix these bugs and make it easier to see what the system does behind the scenes.
+I have decided to redesign the typechecking system to improve readability, fix some persistent bugs, and make it easier to see what the system does behind the scenes.
 This redesign is also necessary to be able to have real typeclasses that the user can define.
-
-
 
 ## Using The System
 
