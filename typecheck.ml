@@ -18,6 +18,10 @@ let rec zip lst1 lst2 =
   | [], [] -> []
   | _, _ -> failwith "cannot call zip on lists of unequal length"
 
+let rec has_dups = function
+  | [] -> false
+  | h::t -> if mem h t then true else has_dups t
+
 (* DEFINE THE STATE OF THE TYPECHECKER AND SOME ASSOCIATED HELPERS *)
 type state = {
   type_equalities : ((expr_type * expr_type * loc_info * explanation) list) ref;
@@ -539,7 +543,6 @@ let rec tcheck (state : state ref) = function
       let tlist = map (local_scope state) elist in
       Product tlist
   | IMatch (e,cases,l) ->
-      (* TODO: determine the sumtype that we need this to be and handle the case that we don't have an immediate sumtype *)
       display_state state l "working on this match statement";
       let t = local_scope state e in
       let out_type = TypeVar(get_fresh state) in
@@ -551,6 +554,9 @@ let rec tcheck (state : state ref) = function
       let fresh_targs = map (fun _ -> TypeVar(get_fresh state)) targs in
       let generic_expected = SumType(t_name,fresh_targs) in
       add_type_equality state t generic_expected l "this expression is being matched on with constructors coming from this sum type";
+      (* TODO: add check to ensure cases are not duplicated *)
+      if has_dups (map fst cases) then failwith "match statement has duplicate matches";
+      (* TODO: give warnings if not all cases are matched *)
       let check_case : user_var_name * info_expr -> unit = function
       | (cons, handler) ->
         match find_opt (fun x -> fst x = cons) def_list with
