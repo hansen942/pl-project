@@ -7,20 +7,14 @@ It also has limited support for type classes.
 After bugs that I was unable to fix before submitting this project for my PL course, I have decided to redesign the system to fix these bugs and make it easier to see what the system does behind the scenes.
 This redesign is also necessary to be able to have real typeclasses that the user can define.
 
-### New Functionality
 
-Redesigning the system will allow me to add displays that allow the typechecker to walk through its reasoning and explain why it typed things a certain way.
-This will make it easier to debug, as well as being informative for someone using the system.
 
-This is currently handled by setting the value of the `debug` reference in the `typecheck.ml` file, so if you do not want to see this / actually just want to typecheck something, you should set this reference to `false`. I will eventually get around to making this a command-line flag.
+## Using The System
 
-## How to Build
-
-Note: 
-In the current build this code will not function, you will need to go back to commit `dc4324d` to run the examples until I finish this rebuilding.
+### Building the Code
 
 To build the project, clone the repo and then run `make build` in your local copy.
-This should produce a file called `main.native`.
+This should produce an executable `main.native`.
 
 When you have a program you want to run, say `my_program.evco`, just run `./main.native my_program.evco`.
 This will result in an error message if your program is not well-typed, otherwise it will print the type of your program (the type of its final value, usually `unit`), followed by any output from the program.
@@ -28,6 +22,15 @@ This will result in an error message if your program is not well-typed, otherwis
 You can also run my unit tests by running `make test` which will build the test file and run it, use `make clean` to delete the `main.native` and `tests.native` executables from your directory, or use `make doc` do generate documentation for the source code (which may inadvertantly create the `main.native` file when rebuilding the code).
 
 I have only tested this on ubuntu so you may run into trouble with the makefile and newlines if you try running this on a non-unix system.
+
+### New Functionality
+
+In redesigning the system I added displays that allow the typechecker to walk through its reasoning and explain why it typed things a certain way.
+This will make it easier to debug, as well as being educational/informative for someone using the system.
+
+To use this new functionality when typechecking a file `my_program.evco`, set the `debug` flag when running, like `./main.native -debug my_program.evco`.
+The typechecker will stop at (many) checkpoints as it works through the program and display (most of) its state.
+When it does this, it will block execution; you need to press enter to allow the typechecker to continue.
 
 ## Example Code
 
