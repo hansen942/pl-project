@@ -151,7 +151,7 @@ match e with
 | Int _ -> return e 
 | Bool _ -> return e 
 | Lambda _ -> return e 
-| Var _ -> return e  
+| Var _ -> failwith "cannot evaluate a variable"
 | Unit -> return e 
 | Print e -> fun s -> print_endline (string_of_expr (eval' e s)); (Unit,s)
 | Sum (c,e) -> let* e' = smallstep e in return (Sum (c,e'))
@@ -165,4 +165,4 @@ and eval' e s =
   let e', s' = smallstep e s in eval' e' s'
 
 (** [eval e] gives the value that [e] evaluates to. Will never terminate if [e] does not terminate. *)
-let eval e : expr = eval' e init_name
+let eval e init_name : expr = eval' e init_name

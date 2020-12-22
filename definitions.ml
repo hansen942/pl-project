@@ -41,7 +41,6 @@ and expr =
 | Proj of expr * int
 | Neg of expr
 | Binop of expr * binop * expr
-| TClass of tclass_dict * expr
 (*| Lazy of expr ref*)
 
 (*module Compare_VName : Map.OrderedType = struct
@@ -74,12 +73,12 @@ type sugar =
 
 (** [z] is the Z-combinator *)
 let z =
-  let innermost = Lambda ( Application (Application (Var (Name "x"), Var (Name "x")), Var (Name "y")) , Name "y") in
+  let innermost = Lambda (Application (Application (Var (Name "x"), Var (Name "x")), Var (Name "y")) , Name "y") in
   let lazy_omega' = Lambda (Application(Var (Name "f"), innermost), Name "x") in
   Lambda (Application (lazy_omega', lazy_omega'), Name "f") 
 
 let rec desugar : sugar -> expr = function
-| LetRec (v,e1,e2) -> Application (Lambda (desugar e2,v), Application(desugar Z, Lambda (desugar e1,v)))
+| LetRec (v,e1,e2) -> Application (Lambda (desugar e2,v), Application(z, Lambda (desugar e1,v)))
 | Let (v,e1,e2) -> Application (Lambda (desugar e2,v), desugar e1)
 | Z -> z
 | SInt n -> Int n
@@ -317,6 +316,10 @@ let string_of_class_constrained_expr_type constrained_t =
   let relevant_tvars = ftv (fst constrained_t) in
   let stringify_map = fun x -> assoc x (pretty_string_of_tvar_map relevant_tvars 0) in
   let relevant_constraints = filter (fun (x,_) -> mem x relevant_tvars) (snd constrained_t) in
+  let relevant_constraints =
+    let unconstrained = (filter (fun x -> not (mem x (map fst relevant_constraints))) relevant_tvars) in
+    map (fun x -> (x,[])) unconstrained @ relevant_constraints
+  in
   match relevant_constraints with
   | fst_rel_const::tail_rel_cons -> (
   let string_of_const x = pretty_tvar_constraint (fst x) stringify_map (snd x) in
@@ -594,7 +597,7 @@ let loc = function
 
 let pull fresh =
   let result = !fresh in
-  fresh := (match !fresh with Sub x -> Sub (x+1));
+  fresh := (match !fresh with Sub x -> Sub (x+1) | _ -> failwith "no more compiler warnings!");
   result
 
 let rec info_of_from_parser fresh e = 
@@ -629,6 +632,7 @@ let rec type_of_annotation = function
   | AProduct (alist,_) -> Product (map type_of_annotation alist)
   | ASumType (u,alist,_) -> SumType (u,map type_of_annotation alist)
   | ATypeVar (v,_) -> TypeVar v
+  | AFun (t1,t2,_) -> Fun(type_of_annotation t1, type_of_annotation t2)
 
 let string_of_annotation x = string_of_type (type_of_annotation x)
 
@@ -649,7 +653,27 @@ let rec typed_expr_of_info_expr e =
   | IProj (e,n,i,_) -> TProj (r e, n, i)
   | INewSum(u,targs,def,cont,_) -> NewSum(u,targs,map (fun (name,def,_) -> (name, type_of_annotation def)) def,r cont)
   | ILet(v,a,e1,e2,_) -> TLet(v,type_of_annotation a, r e1, r e2)
-  | ILetRec(v,a,e1,e2,_) -> TLet(v,type_of_annotation a, r e1, r e2)
+  | ILetRec(v,a,e1,e2,_) -> TLetRec(v,type_of_annotation a, r e1, r e2)
   | INeg(e,_) -> TNeg (r e)
+  | IBinop(e1,b,e2,_) -> TBinop(r e1,b,r e2)
 
 let string_of_info = typed_expr_of_info_expr >> string_of_typed_expr
+
+let rec strip : typed_expr -> sugar = function
+| TLet (v,tv,e1,e2) -> Let (v, strip e1, strip e2)
+| TLetRec (v,tv,e1,e2) -> LetRec (v, strip e1, strip e2)
+| TInt n -> SInt n
+| TBool b -> SBool b
+| TVar v -> SVar v
+| TLambda (e1,v,tv) -> SLambda (strip e1, v)
+| TApplication (e1,e2) -> SApplication (strip e1, strip e2)
+| TIf (e1,e2,e3) -> SIf (strip e1, strip e2, strip e3)
+| TUnit -> SUnit
+| TPrint e -> SPrint (strip e)
+| TSum (name,e) -> SSum(name,strip e)
+| TProd elist -> SProd(map strip elist)
+| TMatch (e,cases) -> SMatch (strip e, map (fun (c,e) -> (c,strip e)) cases)
+| TProj (e,n,l) -> SProj (strip e, n)
+| NewSum (name, targs, cons, cont) -> strip cont
+| TNeg e -> SNeg (strip e)
+| TBinop (e1,op,e2) -> SBinop (strip e1,op,strip e2)

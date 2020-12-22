@@ -1,13 +1,17 @@
 open Definitions
 open List
 
-let file = ref "test.evco"
+let file = ref ""
 
 type explanation = string
 
 let time_step = 1
 
+let debug = ref false
+
 (* SOME GENERAL FUNCTIONS *)
+(* returns list where the n^{th} element is the pair (x,y) where x and y are the n^{th} elements of the lists
+   throws an error if the lists are of unequal length*)
 let rec zip lst1 lst2 =
   match lst1, lst2 with
   | h1::t1, h2::t2 -> (h1,h2)::(zip t1 t2)
@@ -37,7 +41,8 @@ let init_state fresh = ref {
   depth_var_stack = ref 0;
   fresh_var = fresh;
   user_types = ref [
-    ("option", ["'a"], [("Some", TypeVar((Name "'a"))); ("None", UnitType)], Lexing.dummy_pos)
+    ("option", ["'a"], [("Some", TypeVar((Name "'a"))); ("None", UnitType)], Lexing.dummy_pos);
+    ("list", ["'a"], [("Cons", Product[TypeVar((Name "'a"));SumType("list",[TypeVar(Name "'a")])]); ("Nil", UnitType)], Lexing.dummy_pos)
   ];
   sub_so_far = ref []
 }
@@ -70,6 +75,8 @@ let add_type state name type_args def_list loc =
 let user_types state = map (fun (name,_,_,_) -> name) !(!state.user_types)
 
 let is_type state name = mem name (user_types state)
+
+let entry_of_type state name = find (fun (u,_,_,_) -> u = name) !(!state.user_types)
 
 (* HELPERS FOR ADDING AND LOOKING UP CONSTRAINTS*)
 
@@ -123,7 +130,6 @@ let lookup state x =
 
 (* DEFINE A BUNCH OF STUFF TO PRINT OUT THE STATE OF THE TYPECHECKER *)
 (* change to false to avoid printouts *)
-let debug = ref true
 
 let display filename location =
   let file = open_in filename in
@@ -175,6 +181,7 @@ let display_state state loc msg =
   reset_display ();
   print_string (string_of_state !state);
   display (!file) loc;
+  print_newline ();
   print_endline msg;
   flush stdout;
   wait ()
@@ -246,20 +253,36 @@ let rec unify state tracking : unit =
       match h with
       | (TypeVar t, t',l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraints %s = %s that was inferred at %s because %s" (string_of_var t) (string_of_type t') (string_of_loc l) m);
-          if (not (List.mem t (ftv t'))) then (apply_sub (t,t') state tracking; drop_equality (); reduce_typeclass_constraints state; unify state tracking)
-          else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))
+          drop_equality ();
+          if (not (List.mem t (ftv t'))) then (apply_sub (t,t') state tracking; reduce_typeclass_constraints state; unify state tracking)
+          else if TypeVar t <> t' then failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t')) else
+          unify state tracking
           (*else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))*)
       | (t', TypeVar t,l,m) ->(
           display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_var t) (string_of_type t') (string_of_loc l) m);
+          drop_equality ();
           if not (List.mem t (ftv t'))
-          then (apply_sub (t,t') state tracking; drop_equality (); reduce_typeclass_constraints state; unify state tracking)
-          else failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t'))
+          then (apply_sub (t,t') state tracking; reduce_typeclass_constraints state; unify state tracking)
+          else if TypeVar t <> t' then failwith (Printf.sprintf "cannot construct infinite type arising from constraint %s = %s" (string_of_var t) (string_of_type t')) else
+            unify state tracking
       )
       | (Fun(t1i,t1o),Fun(t2i,t2o),l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))) (string_of_loc l) m);
           drop_equality ();
           add_type_equality state t1i t2i l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))));
           add_type_equality state t1o t2o l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Fun(t1i,t1o))) (string_of_type (Fun(t2i,t2o))));
+          unify state tracking
+      | (Product tlist1, Product tlist2,l,m) ->
+          display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)) (string_of_loc l) m);
+          if (length tlist1) <> (length tlist2) then failwith (Printf.sprintf "cannot solve the constraint %s = %s because these are products of unequal length" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)));
+          drop_equality ();
+          let _ = map (fun (t1,t2) -> add_type_equality state t1 t2 l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (Product tlist1)) (string_of_type (Product tlist2)))) (zip tlist1 tlist2) in
+          unify state tracking
+      | (SumType(type1,targs1), SumType(type2,targs2),l,m) ->
+          display_constraints state (Printf.sprintf "dealing with the constraint %s = %s that was inferred at %s because %s" (string_of_type (SumType(type1,targs1))) (string_of_type (SumType(type2,targs2))) (string_of_loc l) m);
+          drop_equality ();
+          if type1 <> type2 then failwith (Printf.sprintf "cannot solve the constraint %s = %s" (string_of_type (SumType(type1,targs1))) (string_of_type (SumType(type2,targs2))));
+          let _ = map (fun (t1,t2) -> add_type_equality state t1 t2 l (Printf.sprintf "because of earlier constraint %s = %s" (string_of_type (SumType(type1,targs1))) (string_of_type (SumType(type2,targs2))))) (zip targs1 targs2) in
           unify state tracking
       | (t,t',l,m) ->
           display_constraints state (Printf.sprintf "dealing with the constraints %s = %s that was inferred at %s because %s\n" (string_of_type t) (string_of_type t') (string_of_loc l) m);
@@ -281,20 +304,25 @@ let reduce state tracking =
 
 (* NOW START THE ACTUAL TYPECHECKING AREA *)
 
-let rec gen_new_tvars state t = 
+let rec gen_new_tvars state so_far t = 
   match t with
   | Integer -> Integer 
   | Boolean -> Boolean
   | UnitType -> UnitType
-  | Fun (a1,a2) -> Fun(gen_new_tvars state a1, gen_new_tvars state a2)
-  | Product (alist) -> Product (map (gen_new_tvars state) alist)
-  | SumType (name,alist) -> SumType(name, map (gen_new_tvars state) alist)
+  | Fun (a1,a2) -> Fun(gen_new_tvars state so_far a1, gen_new_tvars state so_far a2)
+  | Product (alist) -> Product (map (gen_new_tvars state so_far) alist)
+  | SumType (name,alist) -> SumType(name, map (gen_new_tvars state so_far) alist)
   | TypeVar (x) ->
+      match assoc_opt x !so_far with
+      | None ->(
       let fresh = get_fresh state in
+      so_far := (x,fresh)::!so_far;
       let required = type_classes_of state x in
       (* fresh needs to have same required typeclasses as x did *)
       let _ = map (fun c -> add_type_class_required state (TypeVar fresh) c Lexing.dummy_pos (Printf.sprintf "%s is a clone of %s" (string_of_var fresh) (string_of_var x))) required in
       TypeVar (fresh)
+      )
+      | Some x' -> TypeVar x'
 
 let rec instance_sub state t x e =
   let r = instance_sub state t x in
@@ -304,12 +332,12 @@ let rec instance_sub state t x e =
   | IVar (v,l) ->
       if v = x then
         let fresh_var = get_fresh state in
-        let fresh_t = gen_new_tvars state t in
+        let fresh_t = gen_new_tvars state (ref []) t in
         push_var_type state fresh_var fresh_t Lexing.dummy_pos (Printf.sprintf "%s is a clone of %s for polymorphism" (string_of_var fresh_var) (string_of_var x));
         IVar(fresh_var,l)
       else
         e
-  | ILambda (e,x,a,l) -> ILambda (r e, x, a, l)
+  | ILambda (e,x',a,l) -> if x <> x' then ILambda (r e, x', a, l) else ILambda (e, x', a, l)
   | IApplication (e1,e2,l) -> IApplication(r e1, r e2, l)
   | IIf(e1,e2,e3,l) -> IIf(r e1, r e2, r e3, l)
   | IUnit _ -> e
@@ -370,7 +398,21 @@ let binop_check state t1 b t2 l =
     add_type_class_required state t1 Equality l "appears in = operation";
     add_type_class_required state t2 Equality l "appears in = operation";
     Boolean 
-  | _ -> failwith "unimplemented"
+  | And ->
+    display_state state l "this is the and operator so should have bools as args, returns type bool";
+    add_type_equality state t1 Boolean l "appears in and operation";
+    add_type_equality state t2 Boolean l "appears in and operation";
+    Boolean 
+  | Or ->
+    display_state state l "this is the or operator so should have bools as args, returns type bool";
+    add_type_equality state t1 Boolean l "appears in or operation";
+    add_type_equality state t2 Boolean l "appears in or operation";
+    Boolean 
+  | Div ->
+    display_state state l "this is the / operator so should have ints as args, returns type option (int * int)";
+    add_type_equality state t1 Integer l "appears in / operation";
+    add_type_equality state t2 Integer l "appears in / operation";
+    SumType("option", [Product [Integer;Integer]])
 
 let rec tcheck (state : state ref) = function
   | IBinop (e1,op,e2,l) ->
@@ -424,6 +466,22 @@ let rec tcheck (state : state ref) = function
       (* this is catching the case that reduce did not return our tracking list properly *)
       | _ -> failwith "uhhh.." (* this should never happen *)
       )
+  | ILetRec (x,tx,e1,e2,l) ->(
+      display_state state l (Printf.sprintf "starting on this let statement");
+      push_var_type state x (type_of_annotation tx) l (Printf.sprintf "%s is declared as recursive with this type annotation" (string_of_var x));
+      let t1 = local_scope state e1 in
+      pop_var_binding state;
+      add_type_equality state t1 (type_of_annotation tx) l "the annotated and inferred type must be unified";
+      (* determine the principal type *)
+      let pt = reduce state [t1] in
+      match pt with [pt] ->
+      (*NOTE: this push is not necessary because after instance substitution it will not be needed. but for debugging purposes it is kind of nice for all these to be in there *)
+      push_var_type state x pt l (Printf.sprintf "%s is bound to an expression of this type in a let statement" (string_of_var x));
+      let e2 = instance_sub state pt x e2 in
+      tcheck state e2
+      (* this is catching the case that reduce did not return our tracking list properly *)
+      | _ -> failwith "uhhh.." (* this should never happen *)
+      )
   | IUnit l ->
       display_state state l (Printf.sprintf "this is a unit literal, so has type unit");
       UnitType
@@ -454,11 +512,60 @@ let rec tcheck (state : state ref) = function
       tcheck state cont
       )
   | IPrint (e,l) ->
+      display_state state l "this is a print statement, will check that its argument is of the printable typeclass";
       let t = local_scope state e in
       add_type_class_required state t Printable l "print is applied to it";
       UnitType
-  | _ -> failwith "unimplemented"
+  | INeg (e,l) ->
+      display_state state l "this is a negation statement, will check that its argument is an integer";
+      let t = local_scope state e in
+      add_type_equality state t Integer l "appears in a negation statement";
+      Integer
+  | IProj (e,i,n,l) ->
+      display_state state l "this is a projection statement";
+      if i >= n || i < 0 then failwith "index out of bounds";
+      if n < 0 then failwith "no such thing as negative length tuples";
+      let rec generic_prod so_far n =
+        if n = 0 then so_far
+        else generic_prod ((TypeVar(get_fresh state))::so_far) (n-1)
+      in
+      let generic_prod = generic_prod [] n in
+      let t = local_scope state e in
+      add_type_equality state t (Product generic_prod) l (Printf.sprintf "based off of projection statement, this must be a product of length %n" n);
+      nth generic_prod i 
+  | IProd (elist,l) ->
+      let n = length elist in
+      display_state state l (Printf.sprintf "this is a tuple literal of length %n" n);
+      let tlist = map (local_scope state) elist in
+      Product tlist
+  | IMatch (e,cases,l) ->
+      (* TODO: determine the sumtype that we need this to be and handle the case that we don't have an immediate sumtype *)
+      display_state state l "working on this match statement";
+      let t = local_scope state e in
+      let out_type = TypeVar(get_fresh state) in
+      match cases with
+      | [] -> failwith "match statement with no cases handled is not allowed"
+      | (h,_)::_ ->(
+      let (t_name,targs,def_list,_) = try entry_of_cons state h with _ -> failwith (Printf.sprintf "the case is %s but there is no such constructor" h) in
+      display_state state l (Printf.sprintf "because the first case matched is %s, we have determined that this is matching on the type %s" h t_name);
+      let fresh_targs = map (fun _ -> TypeVar(get_fresh state)) targs in
+      let generic_expected = SumType(t_name,fresh_targs) in
+      add_type_equality state t generic_expected l "this expression is being matched on with constructors coming from this sum type";
+      let check_case : user_var_name * info_expr -> unit = function
+      | (cons, handler) ->
+        match find_opt (fun x -> fst x = cons) def_list with
+        | None -> failwith (Printf.sprintf "the constructor %s is not defined for the type %s" cons t_name)
+        | Some (_,t_def) ->
+          let sub_map = (zip fresh_targs (map (fun x -> Name x) targs)) in
+          let expected_type = fold_left (fun acc (inst,arg) -> tsub inst arg acc) t_def sub_map in
+          let handler_type = local_scope state handler in
+          add_type_equality state handler_type (Fun(expected_type,out_type)) l (Printf.sprintf "this is a handler of the %s case in a match statement" cons)
+      in
+      let _ = map check_case cases in out_type
+      )
+      
 
+(* this helper typechecks e using tcheck but removes all newly bound variables after doing so *)
 and local_scope state e =
   let rec help n =
     if n <= 0 then ()
@@ -479,7 +586,8 @@ let add_print_def state e =
 
 let typecheck e fresh =
   let state = init_state fresh in
-  let result = tcheck state (add_print_def state e) in
+  let e = (add_print_def state e) in
+  let result = tcheck state e in
   let r = reduce state [result] in
   display_state state Lexing.dummy_pos "final state of constraints";
   match r with
@@ -487,5 +595,5 @@ let typecheck e fresh =
       let free_tvars = ftv result in
       let class_constraints = filter (fun x -> mem (fst x) free_tvars) !(!state.known_classes) in
       let class_constrained_result = (result,class_constraints) in
-      (class_constrained_result,e,get_fresh state)
+      (class_constrained_result,strip (typed_expr_of_info_expr e), get_fresh state)
   | _ -> failwith "ummm....what!"

@@ -21,6 +21,9 @@ prog: exp EOF                           { $1 }
 
 exp:
     | LET VAR arglist EQUALS exp IN exp { FPLet(Name (fst $2), None, fold_right (fun x acc -> FPLambda(acc,Name (fst x),None,$1)) $3 $5, $7, $1) }
+    | LET VAR arglist COLON t EQUALS exp IN exp { FPLet(Name (fst $2), Some $5, fold_right (fun x acc -> FPLambda(acc,Name (fst x),None,$1)) $3 $7, $9, $1) }
+    | LET REC VAR arglist EQUALS exp IN exp { FPLetRec(Name (fst $3), None, fold_right (fun x acc -> FPLambda(acc,Name (fst x),None,$1)) $4 $6, $8, $1) }
+    | LET REC VAR arglist COLON t EQUALS exp IN exp { FPLetRec(Name (fst $3), Some $6, fold_right (fun x acc -> FPLambda(acc,Name (fst x),None,$1)) $4 $8, $10, $1) }
     | LAMBDA VAR COLON t DOT exp       { FPLambda($6,Name (fst $2),Some($4),$1) }
     | LAMBDA VAR DOT exp               { FPLambda($4,Name (fst $2), None,$1) }
     | NEWTYPE VAR tvararglist EQUALS sumdef IN exp { FPNewSum(fst $2,$3,$5,$7,$1) }
@@ -40,6 +43,7 @@ sumdef:
 
 binop:
     | exp PLUS exp                      { FPBinop ($1,Plus,$3,$2) }
+    | exp MINUS exp                      { FPBinop ($1,Subtract,$3,$2) }
     | exp STAR exp                      { FPBinop ($1,Times,$3,$2) }
     | exp EQUALS exp                    { FPBinop ($1,Eq,$3,$2) }
     | exp MOD exp                    { FPBinop ($1,Mod,$3,$2) }

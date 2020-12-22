@@ -6,17 +6,23 @@ let filename = ref ""
 
 (** [run_prog] first typechecks its input, then evaluates it*)
 let run_prog tsugar fresh =
-  let t,_,_ = typecheck tsugar fresh in
+  file := !filename;
+  let t,e,fresh = typecheck tsugar fresh in
   print_newline ();
   print_endline "finished running typechecker!";
-  Printf.printf "got type %s" (string_of_class_constrained_expr_type t)
-
+  Printf.printf "got type %s\n" (string_of_class_constrained_expr_type t);
+  let basic = desugar e in
+  print_endline "running evaluator now";
+  flush stdout;
+  eval basic fresh
   (*
   print_endline (string_of_class_constrained_expr_type t);
   eval (desugar e)
   *)
 
-let options = []
+let options = [
+  "-debug", Arg.Unit (fun _ -> Typecheck.debug := true), "turn on the debug output of the typechecker"
+]
 
 
 let _ =
