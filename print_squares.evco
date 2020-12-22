@@ -1,3 +1,9 @@
+let rec map f lst =  
+  match lst with    
+  | Nil x -> Nil    
+  | Cons pair ->   
+  Cons(f (proj 2 0 pair), map f (proj 2 1 pair))
+ in
 let ints_up_to n =
   if n < 0 then Nil else
   let rec helper k =

@@ -394,16 +394,19 @@ let binop_check state t1 b t2 l =
     display_state state l "this is the < operator so should have ordered types as args, returns type bool";
     add_type_class_required state t1 Ordered l "appears in < operation";
     add_type_class_required state t2 Ordered l "appears in < operation";
+    add_type_equality state t1 t2 l "appear in < operation with each other";
     Boolean 
   | G ->
     display_state state l "this is the > operator so should have ordered types as args, returns type bool";
     add_type_class_required state t1 Ordered l "appears in > operation";
     add_type_class_required state t2 Ordered l "appears in > operation";
+    add_type_equality state t1 t2 l "appear in > operation with each other";
     Boolean 
   | Eq ->
     display_state state l "this is the = operator so should have eq types as args, returns type bool";
     add_type_class_required state t1 Equality l "appears in = operation";
     add_type_class_required state t2 Equality l "appears in = operation";
+    add_type_equality state t1 t2 l "appear in = operation with each other";
     Boolean 
   | And ->
     display_state state l "this is the and operator so should have bools as args, returns type bool";
@@ -590,6 +593,7 @@ let add_print_def state e =
   let fresh1 = get_fresh state in
   let fresh2 = get_fresh state in
   (ILet(Name "print", ATypeVar(fresh1,Lexing.dummy_pos), ILambda(IPrint (IVar (Name "x",Lexing.dummy_pos),Lexing.dummy_pos), Name "x", ATypeVar(fresh2,Lexing.dummy_pos), Lexing.dummy_pos),e,Lexing.dummy_pos))
+
 
 let typecheck e fresh =
   let state = init_state fresh in
