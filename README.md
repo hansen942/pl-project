@@ -85,24 +85,23 @@ The option type is also automatically included in every file and has the definit
 newtype option 'a = None unit | Some 'a in
 ```
 
-Here is another code snippet that computes the chinese remainder theorem map. It also shows how integer division and the modulo operators have been added and return `option` types (there are no exceptions in the language).
+Here is another code snippet that computes the chinese remainder theorem map. It also shows how division and the modulo operators have been added and return `option` types (there are no exceptions in the language).
 
 
 ```
 {-- this will compute the chinese remainder theorem map --}
 
 let rec gcd_w_proof n m =
-  if m = 0 then
-  {-- guarantee that we give positive gcd --}
-  if n > 0 then (n,1,0)
-  else ((-n),(-1),0)
-  else
-  let x = n / m in
-  match x with
+  if n < 0 then gcd_w_proof (-n) m else
+  if m < 0 then gcd_w_proof n (-m) else
+  if m = 0 then (n,1,0) else
+  let q = n / m in
+  let r = n % m in
+  match q with
   {-- None never happens --}
-  Some x ->
-    let q = proj 2 0 x in
-    let r = proj 2 1 x in
+  Some q ->
+  match r with
+  Some r ->
     let rec_result = gcd_w_proof m r in
     let g = proj 3 0 rec_result in
     let s = proj 3 1 rec_result in
@@ -126,8 +125,8 @@ let basis n m =
 in
 
 {-- chinese_remainder n p m q is:
-  if p and q are relatively prime: Some k where k is the unique integer between 0 and |pq| - 1 that is equivalent to n mod p and m mod q
-  otherwise: None --}
+  if p and q are relatively prime: Some k where k is the unique integer between 0 and pq - 1 that is equivlant to n mod p and m mod q
+  otherwise None --}
 let chinese_remainder n p m q =
   let pqbasis = basis p q in
   match pqbasis with
@@ -156,6 +155,12 @@ let f x y = x = y in f
 
 which typechecks to `∀ eq α. α →  α →  bool`.
 The typeclass `eq` is the typeclass of types where equality is defined, and so this type says that the function `f` expects two arguments of the same type which are of this typeclass `eq`, so that equality is defined on them.
+
+Similarly,
+```
+let f x y = x + y in f
+```
+typechecks to `∀ num α. α →  α →  α` which says that this is a function which takes in two numbers of the same type (members of the `num` typeclass) and returns the same type. So `f` can be applied to elements of type `int` or `float`.
 
 ## Important Notes
 
