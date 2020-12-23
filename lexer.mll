@@ -8,6 +8,7 @@ let num_in = ref 0
 
 let digit = ['0'-'9']
 let int_pattern = digit+
+let float_pattern = digit+['.']digit*
 let id = ['a'-'z'] ['a'-'z' '_' '0'-'9']* ['\'']*
 let bigid = ['A'-'Z'] ['a'-'z' 'A'-'Z' '_' '0'-'9']* ['\'']*
 let ws = [' ' '\t']
@@ -61,6 +62,7 @@ and token = parse
 | id as v          { VAR(v,(lexbuf.Lexing.lex_curr_p)) }
 | bigid as i       { TNAME(i,(lexbuf.Lexing.lex_curr_p)) }
 | int_pattern as n { INT(int_of_string n,(lexbuf.Lexing.lex_curr_p)) }
+| float_pattern as n { FLOAT(float_of_string n,(lexbuf.Lexing.lex_curr_p)) } 
 | eof              { EOF }
 
 | _ as c  {

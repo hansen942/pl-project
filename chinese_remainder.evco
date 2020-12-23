@@ -1,17 +1,16 @@
 {-- this will compute the chinese remainder theorem map --}
 
 let rec gcd_w_proof n m =
-  if m = 0 then
-  {-- guarantee that we give positive gcd --}
-  if n > 0 then (n,1,0)
-  else ((-n),(-1),0)
-  else
-  let x = n / m in
-  match x with
+  if n < 0 then gcd_w_proof (-n) m else
+  if m < 0 then gcd_w_proof n (-m) else
+  if m = 0 then (n,1,0) else
+  let q = n / m in
+  let r = n % m in
+  match q with
   {-- None never happens --}
-  Some x ->
-    let q = proj 2 0 x in
-    let r = proj 2 1 x in
+  Some q ->
+  match r with
+  Some r ->
     let rec_result = gcd_w_proof m r in
     let g = proj 3 0 rec_result in
     let s = proj 3 1 rec_result in

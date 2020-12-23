@@ -28,6 +28,7 @@ type tclass_dict = (var_name * expr) list
 (** [expr] is the type of our untyped expressions. It is essentially the applied lambda calculus. *)
 and expr =
 | Int of int
+| Float of float
 | Var of var_name
 | Lambda of expr * var_name
 | Application of expr * expr
@@ -57,6 +58,7 @@ type sugar =
 | Let of var_name * sugar * sugar 
 | Z
 | SInt of int
+| SFloat of float
 | SVar of var_name
 | SLambda of sugar * var_name
 | SApplication of sugar * sugar
@@ -82,6 +84,7 @@ let rec desugar : sugar -> expr = function
 | Let (v,e1,e2) -> Application (Lambda (desugar e2,v), desugar e1)
 | Z -> z
 | SInt n -> Int n
+| SFloat f -> Float f
 | SVar v -> Var v
 | SLambda(e,x) -> Lambda(desugar e,x)
 | SApplication(e1,e2) -> Application(desugar e1,desugar e2)
@@ -99,6 +102,7 @@ let rec desugar : sugar -> expr = function
 
 let rec is_val = function
 | Int _ -> true
+| Float _ -> true
 | Bool _ -> true
 | Lambda _ -> true
 | Unit -> true
@@ -119,6 +123,7 @@ let naive_list_union : 'a list -> 'a list -> 'a list = naive_list_union' []
    if a projection will fail then it doesn't have any free variables*)
 let rec fv : expr -> var_name list = function
 | Int _ -> []
+| Float _ -> []
 | Var v -> [v]
 | Lambda (ebody,arg) -> filter (fun x -> not (x = arg)) (fv ebody)
 | Application (e1,e2) -> naive_list_union (fv e1) (fv e2)
@@ -158,6 +163,7 @@ let string_of_binop : binop -> string = function
 
 let rec string_of_expr : expr -> string = function
 | Int n -> string_of_int n
+| Float f -> string_of_float f
 | Var v -> string_of_var v
 | Bool b -> string_of_bool b
 | Lambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_expr e) 
@@ -184,6 +190,7 @@ let rec string_of_sugar : sugar -> string = function
 | LetRec (v,e1,e2) -> Printf.sprintf "let rec %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
 | Z -> "Z"
 | SInt n -> string_of_int n
+| SFloat f -> string_of_float f
 | SVar v -> string_of_var v
 | SBool b -> string_of_bool b
 | SLambda (e,arg) -> Printf.sprintf "λ%s.%s" (string_of_var arg) (string_of_sugar e) 
@@ -211,17 +218,20 @@ type type_class =
 | Ordered
 | Printable
 | Equality
+| Number
 
 let string_of_typeclass = function
 | Printable -> "printable"
 | Ordered -> "ord"
 | Equality -> "eq"
+| Number -> "num"
 
 type class_constraints = type_class list
 
 (** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
 type expr_type =
 | Integer
+| Floating
 | Boolean
 | Fun of expr_type * expr_type
 | UnitType
@@ -235,6 +245,7 @@ let rec ftv = function
   let ft2v = ftv t2 in
   naive_list_union ft1v ft2v
 | Integer -> []
+| Floating -> []
 | Boolean -> []
 | UnitType -> []
 | TypeVar v -> [v]
@@ -256,6 +267,7 @@ let string_of_type = string_of_type' string_of_var in
 match t with
 | Integer -> "int"
 | Boolean -> "bool"
+| Floating -> "float"
 | Fun (t1,t2) ->
   let s1 =
     match t1 with
@@ -334,6 +346,7 @@ let string_of_class_constrained_expr_type constrained_t =
 type typed_expr =
 | TInt of int
 | TBool of bool
+| TFloat of float
 | TVar of var_name
 | TLambda of typed_expr * var_name * expr_type
 | TApplication of typed_expr * typed_expr
@@ -353,6 +366,7 @@ type typed_expr =
 
 let rec string_of_typed_expr : typed_expr -> string = function
 | TInt n -> string_of_int n
+| TFloat f -> string_of_float f
 | TVar v -> string_of_var v
 | TBool b -> string_of_bool b
 | TLambda (e,arg,t) -> Printf.sprintf "λ%s : %s.%s" (string_of_var arg) (string_of_type t) (string_of_typed_expr e) 
@@ -388,6 +402,7 @@ let rec string_of_typed_expr : typed_expr -> string = function
 let rec printable : expr_type -> bool = function
 | UnitType -> true
 | Integer -> true
+| Floating -> true
 | Boolean -> true
 | Fun _ -> false
 | SumType (name,args) -> false
@@ -398,6 +413,7 @@ let rec printable : expr_type -> bool = function
 (* these types only have optional type annotations *)
 type opt_t_expr = 
 | OInt of int
+| OFloat of float
 | OBool of bool
 | OVar of var_name
 | OLambda of opt_t_expr * var_name * (expr_type option)
@@ -438,6 +454,7 @@ let rec annotate_opt_t_expr oexpr =
   let f = annotate_opt_t_expr in
   match oexpr with
   | OInt n -> return(TInt n)
+  | OFloat f -> return(TFloat f)
   | OBool b -> return(TBool b)
   | OVar v -> return(TVar v)
   | OLambda(e1,v,t_opt) ->
@@ -502,6 +519,7 @@ type loc_info = Lexing.position
 (** [expr_type] is the type of types in our language. Hopefully we will extend this to include user-defined types as well.*)
 type annotation =
 | AInteger of loc_info 
+| AFloating of loc_info
 | ABoolean of loc_info 
 | AFun of annotation * annotation * loc_info 
 | AUnitType of loc_info 
@@ -512,6 +530,7 @@ type annotation =
 
 let loc_of_type : annotation -> loc_info = function
   | AInteger x -> x
+  | AFloating x -> x
   | ABoolean x -> x
   | AFun (_,_,x) -> x
   | AUnitType x -> x
@@ -521,6 +540,7 @@ let loc_of_type : annotation -> loc_info = function
 
 type from_parser_expr =
 | FPInt of int * loc_info
+| FPFloat of float * loc_info
 | FPBool of bool * loc_info
 | FPVar of var_name * loc_info
 | FPLambda of from_parser_expr * var_name * (annotation option) * loc_info
@@ -539,6 +559,7 @@ type from_parser_expr =
 | FPBinop of from_parser_expr * binop * from_parser_expr * loc_info
 
 let loc_of_expr : from_parser_expr -> loc_info = function
+  | FPFloat (_,x) -> x
   | FPInt (_,x) -> x
   | FPBool (_,x) -> x
   | FPVar (_,x) -> x
@@ -559,6 +580,7 @@ let loc_of_expr : from_parser_expr -> loc_info = function
 
 type info_expr =
 | IInt of int * loc_info
+| IFloat of float * loc_info
 | IBool of bool * loc_info
 | IVar of var_name * loc_info
 | ILambda of info_expr * var_name * annotation * loc_info
@@ -578,6 +600,7 @@ type info_expr =
 
 let loc = function
   | IInt (_,x) -> x
+  | IFloat (_,x) -> x
   | IBool (_,x) -> x
   | IVar (_,x) -> x
   | ILambda (_,_,_,x) -> x
@@ -609,6 +632,7 @@ let rec info_of_from_parser fresh e =
   match e with
   | FPBinop (e1,b,e2,l) -> IBinop (r e1, b, r e2,l)
   | FPInt (n,l) -> IInt (n,l)
+  | FPFloat (f,l) -> IFloat (f,l)
   | FPBool (b,l) -> IBool (b,l)
   | FPVar (v,l) -> IVar (v,l)
   | FPLambda (e1,v,a,l) -> ILambda(r e1,v,fill_t l a,l)
@@ -627,6 +651,7 @@ let rec info_of_from_parser fresh e =
 
 let rec type_of_annotation = function
   | AInteger _ -> Integer
+  | AFloating _ -> Floating
   | ABoolean _ -> Boolean
   | AUnitType _ -> UnitType
   | AProduct (alist,_) -> Product (map type_of_annotation alist)
@@ -640,6 +665,7 @@ let rec typed_expr_of_info_expr e =
   let r = typed_expr_of_info_expr in
   match e with
   | IInt (n,_) -> TInt n
+  | IFloat (f,_) -> TFloat f
   | IBool (b,_) -> TBool b
   | IVar (v,_) -> TVar v
   | ILambda (e1,v,a,_) -> TLambda (r e1, v, type_of_annotation a)
@@ -663,6 +689,7 @@ let rec strip : typed_expr -> sugar = function
 | TLet (v,tv,e1,e2) -> Let (v, strip e1, strip e2)
 | TLetRec (v,tv,e1,e2) -> LetRec (v, strip e1, strip e2)
 | TInt n -> SInt n
+| TFloat f -> SFloat f
 | TBool b -> SBool b
 | TVar v -> SVar v
 | TLambda (e1,v,tv) -> SLambda (strip e1, v)

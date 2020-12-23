@@ -2,6 +2,7 @@ open Definitions
 open List
 
 
+
 type eval_state = var_name
 
 let init_name : eval_state = Sub 0
@@ -28,6 +29,7 @@ let rec sub e e_x x : (expr, eval_state) state =
     return (If (e1',e2',e3'))
   | Bool _ -> return e 
   | Int _ -> return e
+  | Float _ -> return e
   | Lambda (body,arg) ->
   if arg = x then return e else
     if not(mem arg (fv e_x)) then
@@ -40,7 +42,6 @@ let rec sub e e_x x : (expr, eval_state) state =
       let* new_body = sub body (Var new_arg_name) arg in
       let* new_body' = subin new_body in
       return (Lambda (new_body',new_arg_name))
-  (*TODO: this needs to replace the arg with a new variable if arg \in fv(e_x) and fix body before substituting *)
   | Unit -> return Unit
   | Print e -> let* e' = subin e in return (Print e')
   | Prod elist ->
@@ -76,11 +77,26 @@ and do_binop op e1 e2 =
       if n2 = 0 then Sum("None",Unit) else
       Sum("Some",Int (let maybe_result = n1 mod n2 in if maybe_result < 0 then maybe_result + n2 else maybe_result))
     | Subtract -> Int (n1 - n2)
-    | Div ->
-      if n2 = 0 then Sum("None",Unit) else
-      let q = n1 / n2 in
-      let r = n1 mod n2 in
-      Sum("Some",Prod [Int q; Int r])
+    | Div ->(
+      try let q = n1 / n2 in
+      Sum("Some", Int q)
+      with _ -> Sum("None",Unit)
+    )
+    | _ -> failwith "failed in do_binop"
+    )
+  | Float n1, Float n2 -> (
+    match op with
+    | Plus -> Float (n1 +. n2)
+    | Times -> Float (n1 *. n2)
+    | L -> Bool (n1 < n2)
+    | G -> Bool (n1 > n2)
+    | Eq -> Bool (n1 = n2)
+    | Subtract -> Float (n1 -. n2)
+    | Div ->(
+      try let q = n1 /. n2 in
+      Sum("Some",Float q)
+      with _ -> Sum("None",Unit)
+    )
     | _ -> failwith "failed in do_binop"
     )
   | Bool b1, Bool b2 -> (
@@ -142,6 +158,7 @@ match e with
 | Neg e -> if is_val e then
   match e with
   | Int n -> return(Int (-n))
+  | Float f -> return(Float (-.f))
   | _ -> failwith "runtime type error"
   else let* e' = smallstep e in return(Neg e')
 | Binop (e1,op,e2) -> if is_val e1 && is_val e2 then return(do_binop op e1 e2) else
@@ -149,6 +166,7 @@ match e with
   let* e2' = smallstep e2 in
   return(Binop(e1',op,e2'))
 | Int _ -> return e 
+| Float _ -> return e
 | Bool _ -> return e 
 | Lambda _ -> return e 
 | Var _ -> failwith "cannot evaluate a variable"

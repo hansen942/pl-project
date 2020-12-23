@@ -144,6 +144,14 @@ let display filename location =
   let lexbuf = Lexing.from_channel file in
   Visualizer.print_out location lexbuf
 
+let display_failure location msg =
+  let file = open_in !file in
+  let lexbuf = Lexing.from_channel file in
+  Visualizer.print_out location lexbuf;
+  print_newline ();
+  print_endline msg;
+  failwith "type error"
+
 let string_of_loc : Lexing.position -> string = function
   | {pos_lnum = line; pos_bol = bol; pos_cnum = cnum} -> Printf.sprintf "line %s, position %s" (string_of_int line) (string_of_int (cnum - bol))
 
@@ -227,6 +235,9 @@ let rec add_weakest_var_classes state : expr_type * type_class -> unit = functio
       | Product tlist -> let _ = map (fun x -> add_weakest_var_classes state (x,Equality)) tlist in ()
       | _ -> ()
     )
+  | (Integer,Number) -> ()
+  | (Floating,Number) -> ()
+  | (t,Number) -> failwith (Printf.sprintf "%s is not in the num typeclass" (string_of_type t))
 
 let rec reduce_typeclass_constraints state =
   match !((!state).required_classes) with
@@ -314,6 +325,7 @@ let reduce state =
 let rec gen_new_tvars state so_far t = 
   match t with
   | Integer -> Integer 
+  | Floating -> Floating
   | Boolean -> Boolean
   | UnitType -> UnitType
   | Fun (a1,a2) -> Fun(gen_new_tvars state so_far a1, gen_new_tvars state so_far a2)
@@ -335,6 +347,7 @@ let rec instance_sub state t x e =
   let r = instance_sub state t x in
   match e with
   | IInt (_,_) -> e
+  | IFloat (_,_) -> e
   | IBool (_,_) -> e
   | IVar (v,l) ->
       if v = x then
@@ -371,20 +384,29 @@ let rec instance_sub state t x e =
 let binop_check state t1 b t2 l =
   match b with
   | Plus -> 
-    display_state state l "this is a sum, so its args should be ints, returning type int";
-    add_type_equality state t1 Integer l "appears in an addition";
-    add_type_equality state t2 Integer l "appears in an addition";
-    Integer
+    display_state state l "this is a sum, so its args should be of the num typeclass, returning type equal to that of the first argument";
+    add_type_class_required state t1 Number l "appears in + operation";
+    add_type_class_required state t2 Number l "appears in + operation";
+    add_type_equality state t1 t2 l "appear on opposite sides of + operation";
+    t1
   | Times ->
-    display_state state l "this is a multiplication, so its args should be ints, returning type int";
-    add_type_equality state t1 Integer l "appears in an addition";
-    add_type_equality state t2 Integer l "appears in an addition";
-    Integer
+    display_state state l "this is a product, so its args should be of the num typeclass, returning type equal to that of the first argument";
+    add_type_class_required state t1 Number l "appears in * operation";
+    add_type_class_required state t2 Number l "appears in * operation";
+    add_type_equality state t1 t2 l "appear on opposite sides of * operation";
+    t1
   | Subtract ->
-    display_state state l "this is a subtraction, so its args should be ints, returning type int";
-    add_type_equality state t1 Integer l "appears in an addition";
-    add_type_equality state t2 Integer l "appears in an addition";
-    Integer
+    display_state state l "this is a subtraction, so its args should be of the num typeclass, returning type equal to that of the first argument";
+    add_type_class_required state t1 Number l "appears in - operation";
+    add_type_class_required state t2 Number l "appears in - operation";
+    add_type_equality state t1 t2 l "appear on opposite sides of - operation";
+    t1
+  | Div ->
+    display_state state l "this is a subtraction, so its args should be of the num typeclass, returning option type of the first argument";
+    add_type_class_required state t1 Number l "appears in / operation";
+    add_type_class_required state t2 Number l "appears in / operation";
+    add_type_equality state t1 t2 l "appear on opposite sides of / operation";
+    SumType("option", [t1])
   | Mod ->
     display_state state l "this is the mod operator so should have ints as args, returns type option int";
     add_type_equality state t1 Integer l "appears in a mod operation";
@@ -418,11 +440,6 @@ let binop_check state t1 b t2 l =
     add_type_equality state t1 Boolean l "appears in or operation";
     add_type_equality state t2 Boolean l "appears in or operation";
     Boolean 
-  | Div ->
-    display_state state l "this is the / operator so should have ints as args, returns type option (int * int)";
-    add_type_equality state t1 Integer l "appears in / operation";
-    add_type_equality state t2 Integer l "appears in / operation";
-    SumType("option", [Product [Integer;Integer]])
 
 let rec tcheck (state : state ref) = function
   | IBinop (e1,op,e2,l) ->
@@ -432,6 +449,9 @@ let rec tcheck (state : state ref) = function
   | IInt (_,l) ->
       display_state state l "this is an integer literal, so has type int";
       Integer
+  | IFloat (_,l) ->
+      display_state state l "this is a float literal, so has type float";
+      Floating
   | IBool (_,l) ->
       display_state state l "this is a boolean literal, so has type bool";
       Boolean
@@ -457,7 +477,7 @@ let rec tcheck (state : state ref) = function
       Fun(type_of_annotation arg_t,t_body)
   | IVar (x,l) ->(
       match lookup state x with
-      | None -> display_state state l (Printf.sprintf "the variable %s is unbound" (string_of_var x)); failwith "unbound variable"
+      | None -> display_state state l (Printf.sprintf "the variable %s is unbound" (string_of_var x)); failwith (Printf.sprintf "variable %s is unbound" (string_of_var x))
       | Some (t,l,m) ->
         display_state state l (Printf.sprintf "the variable %s has type %s, which was inferred at %s because %s" (string_of_var x) (string_of_type t) (string_of_loc l) m);
         t
@@ -525,14 +545,14 @@ let rec tcheck (state : state ref) = function
       add_type_class_required state t Printable l "print is applied to it";
       UnitType
   | INeg (e,l) ->
-      display_state state l "this is a negation statement, will check that its argument is an integer";
+      display_state state l "this is a negation statement, will check that its argument is a number";
       let t = local_scope state e in
-      add_type_equality state t Integer l "appears in a negation statement";
-      Integer
+      add_type_class_required state t Number l "appears in a negation statement";
+      t
   | IProj (e,i,n,l) ->
       display_state state l "this is a projection statement";
       if i >= n || i < 0 then failwith "index out of bounds";
-      if n < 0 then failwith "no such thing as negative length tuples";
+      if n < 0 then display_failure l "this projection specifies it is for a negative length tuple, but there is no such thing";
       let rec generic_prod so_far n =
         if n = 0 then so_far
         else generic_prod ((TypeVar(get_fresh state))::so_far) (n-1)
@@ -551,15 +571,15 @@ let rec tcheck (state : state ref) = function
       let t = local_scope state e in
       let out_type = TypeVar(get_fresh state) in
       match cases with
-      | [] -> failwith "match statement with no cases handled is not allowed"
+      | [] -> display_failure l "this match statement has no cases, which is not allowed"
       | (h,_)::_ ->(
-      let (t_name,targs,def_list,_) = try entry_of_cons state h with _ -> failwith (Printf.sprintf "the case is %s but there is no such constructor" h) in
+      let (t_name,targs,def_list,_) = try entry_of_cons state h with _ -> display_failure l (Printf.sprintf "this match statement has first case %s but there is no such constructor" h) in
       display_state state l (Printf.sprintf "because the first case matched is %s, we have determined that this is matching on the type %s" h t_name);
       let fresh_targs = map (fun _ -> TypeVar(get_fresh state)) targs in
       let generic_expected = SumType(t_name,fresh_targs) in
       add_type_equality state t generic_expected l "this expression is being matched on with constructors coming from this sum type";
       (* TODO: add check to ensure cases are not duplicated *)
-      if has_dups (map fst cases) then failwith "match statement has duplicate matches";
+      if has_dups (map fst cases) then display_failure l "match statement has duplicate matches";
       (* TODO: give warnings if not all cases are matched *)
       let check_case : user_var_name * info_expr -> unit = function
       | (cons, handler) ->

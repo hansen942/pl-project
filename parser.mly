@@ -7,6 +7,7 @@
 
 %token <string * Lexing.position > VAR TNAME TVAR
 %token <int * Lexing.position > INT
+%token <float * Lexing.position > FLOAT
 %token <Lexing.position> LET EQUALS IN REC NEWTYPE PLUS MINUS LESS GREATER DIV LAMBDA ARROW LPAREN RPAREN DOT COLON LBRACE RBRACE IF THEN ELSE TRUE FALSE AND OR NOT UNIT MOD MATCH WITH BAR PROJ COMMA STAR COMMENTSTART COMMENTEND
 %token EOF 
 
@@ -71,6 +72,7 @@ value:
     | UNIT                              { FPUnit($1) }
     | LPAREN MINUS exp RPAREN           { FPNeg($3,$1) }
     | INT                               { FPInt(fst $1, snd $1) }
+    | FLOAT                             { FPFloat(fst $1, snd $1) }
     | TRUE                              { FPBool(true,$1) }
     | FALSE                             { FPBool(false,$1) }
     | VAR                               { FPVar(Name (fst $1), (snd $1)) }
