@@ -60,6 +60,7 @@ let rec sub e e_x x : (expr, eval_state) state =
     let* e2' = subin e2 in
     return (Binop (e1',op,e2'))
   | Neg e -> let* e' = subin e in return (Neg e')
+  | Stub -> return Stub
 
 and do_binop op e1 e2 =
   if (not (is_val e1)) || (not (is_val e2)) then
@@ -176,6 +177,7 @@ match e with
 | Prod elist ->
   let* elist' = fold_right (fun x acc -> let* x' = smallstep x in let* acc' = acc in return(x'::acc')) elist (return []) in
   return (Prod elist')
+| Stub -> failwith "tried to evaluate an unimplemented statement"
 
 
 and eval' e s =

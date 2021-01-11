@@ -42,6 +42,7 @@ and expr =
 | Proj of expr * int
 | Neg of expr
 | Binop of expr * binop * expr
+| Stub
 (*| Lazy of expr ref*)
 
 (*module Compare_VName : Map.OrderedType = struct
@@ -72,6 +73,7 @@ type sugar =
 | SProj of sugar * int
 | SNeg of sugar 
 | SBinop of sugar * binop * sugar
+| SStub
 
 (** [z] is the Z-combinator *)
 let z =
@@ -98,6 +100,7 @@ let rec desugar : sugar -> expr = function
 | SProj(e,n) -> Proj(desugar e,n)
 | SNeg e -> Neg (desugar e)
 | SBinop (e1,binop,e2) -> Binop(desugar e1,binop, desugar e2)
+| SStub -> Stub
 
 
 let rec is_val = function
@@ -142,6 +145,7 @@ let rec fv : expr -> var_name list = function
   )
 | Neg e -> fv e
 | Binop (e1,binop,e2) -> naive_list_union (fv e1) (fv e2)
+| Stub -> []
 
 (* old system used ⓥ  symbol to demark internal variables, but this was not always printed correctly*)
 let string_of_var v : string =
@@ -184,6 +188,7 @@ let rec string_of_expr : expr -> string = function
 | Proj (e,n) -> Printf.sprintf "%s[%s]" (string_of_expr e) (string_of_int n)
 | Neg e -> Printf.sprintf "(-%s)" (string_of_expr e) 
 | Binop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_expr e1) (string_of_binop binop) (string_of_expr e2)
+| Stub -> "unimplemented"
 
 let rec string_of_sugar : sugar -> string = function
 | Let (v,e1,e2) -> Printf.sprintf "let %s = %s in %s" (string_of_var v) (string_of_sugar e1) (string_of_sugar e2)
@@ -211,6 +216,7 @@ let rec string_of_sugar : sugar -> string = function
 | SProj (e,n) -> Printf.sprintf "%s[%s]" (string_of_sugar e) (string_of_int n)
 | SNeg e -> Printf.sprintf "(-%s)" (string_of_sugar e) 
 | SBinop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_sugar e1) (string_of_binop binop) (string_of_sugar e2)
+| SStub -> "unimplemented"
 
 (** [type_class] serves the purpose of telling what generic types can have generic operations done on them *)
 (* TODO: allow way to construct new type classes, and change this type to include user-defined type classes *)
@@ -370,6 +376,7 @@ type typed_expr =
 | NewSum of user_var_name * (user_var_name list) * (user_var_name * expr_type) list * typed_expr (* new type name, type variables used, constructors by types, next expression *)
 | TLet of var_name * expr_type * typed_expr * typed_expr
 | TLetRec of var_name * expr_type * typed_expr * typed_expr
+| TStub
 
 
 let rec string_of_typed_expr : typed_expr -> string = function
@@ -405,6 +412,7 @@ let rec string_of_typed_expr : typed_expr -> string = function
 | TLetRec (v,tv,e1,e2) -> Printf.sprintf "let rec %s : %s = %s in %s" (string_of_var v) (string_of_type tv) (string_of_typed_expr e1) (string_of_typed_expr e2)
 | TNeg e -> Printf.sprintf "(-%s)" (string_of_typed_expr e) 
 | TBinop (e1,binop,e2) -> Printf.sprintf "%s %s %s" (string_of_typed_expr e1) (string_of_binop binop) (string_of_typed_expr e2)
+| TStub -> "unimplemented"
 
 (* Note: for type variables you should check the known type class constraints to see if it is declared prinatble before calling this. *)
 let rec printable : expr_type -> bool = function
@@ -565,6 +573,7 @@ type from_parser_expr =
 | FPLetRec of var_name * (annotation option) * from_parser_expr * from_parser_expr  * loc_info
 | FPNeg of from_parser_expr * loc_info
 | FPBinop of from_parser_expr * binop * from_parser_expr * loc_info
+| FPStub of loc_info
 
 let loc_of_expr : from_parser_expr -> loc_info = function
   | FPFloat (_,x) -> x
@@ -585,6 +594,7 @@ let loc_of_expr : from_parser_expr -> loc_info = function
   | FPLetRec (_,_,_,_,x) -> x
   | FPNeg (_,x) -> x
   | FPBinop (_,_,_,x) -> x
+  | FPStub (l) -> l
 
 type info_expr =
 | IInt of int * loc_info
@@ -605,6 +615,7 @@ type info_expr =
 | ILetRec of var_name * annotation * info_expr * info_expr  * loc_info
 | INeg of info_expr * loc_info
 | IBinop of info_expr * binop * info_expr * loc_info
+| IStub of loc_info
 
 let loc = function
   | IInt (_,x) -> x
@@ -625,6 +636,7 @@ let loc = function
   | ILetRec (_,_,_,_,x) -> x
   | INeg (_,x) -> x
   | IBinop (_,_,_,x) -> x
+  | IStub x -> x
 
 let pull fresh =
   let result = !fresh in
@@ -656,6 +668,7 @@ let rec info_of_from_parser fresh e =
   | FPLet (v,a,e1,e2,l) -> ILet (v,fill_t l a, r e1, r e2, l)
   | FPLetRec (v,a,e1,e2,l) -> ILetRec (v,fill_t l a, r e1, r e2, l)
   | FPNeg (e,l) -> INeg (r e, l)
+  | FPStub l -> IStub l
 
 let rec type_of_annotation = function
   | AInteger _ -> Integer
@@ -690,6 +703,7 @@ let rec typed_expr_of_info_expr e =
   | ILetRec(v,a,e1,e2,_) -> TLetRec(v,type_of_annotation a, r e1, r e2)
   | INeg(e,_) -> TNeg (r e)
   | IBinop(e1,b,e2,_) -> TBinop(r e1,b,r e2)
+  | IStub l -> TStub
 
 let string_of_info = typed_expr_of_info_expr >> string_of_typed_expr
 
@@ -712,3 +726,4 @@ let rec strip : typed_expr -> sugar = function
 | NewSum (name, targs, cons, cont) -> strip cont
 | TNeg e -> SNeg (strip e)
 | TBinop (e1,op,e2) -> SBinop (strip e1,op,strip e2)
+| TStub -> SStub

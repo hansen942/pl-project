@@ -379,6 +379,7 @@ let rec instance_sub state t x e =
         ILetRec (x', a, r e1, r e2, l)
   | INeg (e,l) -> INeg (r e, l)
   | IBinop (e1,b,e2,l) -> IBinop(r e1, b, r e2, l)
+  | IStub l -> IStub l
 
 
 let binop_check state t1 b t2 l =
@@ -463,6 +464,9 @@ let rec tcheck (state : state ref) = function
       add_type_equality state t1 Boolean l "appears as a guard in if statement";
       add_type_equality state t2 t3 l "these are types of two branches of if statement";
       t2
+  | IStub l ->
+      display_state state l "this unimplemented expression will be given the next fresh type variable";
+      TypeVar(get_fresh state)
   | IApplication (e1,e2,l) ->
       display_state state l "this is an application, so will make sure the first expression is a function that can be applied to the second";
       let out_type = TypeVar(get_fresh state) in

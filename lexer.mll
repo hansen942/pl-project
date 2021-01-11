@@ -58,6 +58,7 @@ and token = parse
 | "newtype"        { NEWTYPE(lexbuf.Lexing.lex_curr_p) }
 | "|"              { BAR(lexbuf.Lexing.lex_curr_p) }
 | "()"             { UNIT(lexbuf.Lexing.lex_curr_p) }
+| "unimplemented"  { STUB(lexbuf.Lexing.lex_curr_p) }
 | tvarid as v      { TVAR(v,(lexbuf.Lexing.lex_curr_p)) }
 | id as v          { VAR(v,(lexbuf.Lexing.lex_curr_p)) }
 | bigid as i       { TNAME(i,(lexbuf.Lexing.lex_curr_p)) }

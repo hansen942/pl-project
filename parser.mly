@@ -8,7 +8,7 @@
 %token <string * Lexing.position > VAR TNAME TVAR
 %token <int * Lexing.position > INT
 %token <float * Lexing.position > FLOAT
-%token <Lexing.position> LET EQUALS IN REC NEWTYPE PLUS MINUS LESS GREATER DIV LAMBDA ARROW LPAREN RPAREN DOT COLON LBRACE RBRACE IF THEN ELSE TRUE FALSE AND OR NOT UNIT MOD MATCH WITH BAR PROJ COMMA STAR COMMENTSTART COMMENTEND
+%token <Lexing.position> LET EQUALS IN REC NEWTYPE PLUS MINUS LESS GREATER DIV LAMBDA ARROW LPAREN RPAREN DOT COLON LBRACE RBRACE IF THEN ELSE TRUE FALSE AND OR NOT UNIT MOD MATCH WITH BAR PROJ COMMA STAR COMMENTSTART COMMENTEND STUB
 %token EOF 
 
 %type <Definitions.from_parser_expr> prog
@@ -76,6 +76,7 @@ value:
     | TRUE                              { FPBool(true,$1) }
     | FALSE                             { FPBool(false,$1) }
     | VAR                               { FPVar(Name (fst $1), (snd $1)) }
+    | STUB                              { FPStub($1) }
     | LPAREN exp RPAREN                 { $2 }
 
 arglist:
