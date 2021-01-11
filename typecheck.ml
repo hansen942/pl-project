@@ -493,8 +493,13 @@ let rec tcheck (state : state ref) = function
       (*NOTE: this push is not necessary because after instance substitution it will not be needed. but for debugging purposes it is kind of nice for all these to be in there *)
       push_var_type state x pt l (Printf.sprintf "%s is bound to an expression of this type in a let statement" (string_of_var x));
       display_state state l (Printf.sprintf "got back a principal type of %s for the variable %s" (string_of_type pt) (string_of_var x));
-      let e2 = instance_sub state pt x e2 in
+      (match pt with
+      | TypeVar _ ->
       tcheck state e2
+      | _ ->
+          if has_tv pt then let e2 = instance_sub state pt x e2 in tcheck state e2
+          else tcheck state e2
+      )
   | ILetRec (x,tx,e1,e2,l) ->
       display_state state l (Printf.sprintf "starting on this let statement");
       push_var_type state x (type_of_annotation tx) l (Printf.sprintf "%s is declared as recursive with this type annotation" (string_of_var x));
@@ -508,8 +513,13 @@ let rec tcheck (state : state ref) = function
       (*NOTE: this push is not necessary because after instance substitution it will not be needed. but for debugging purposes it is kind of nice for all these to be in there *)
       push_var_type state x pt l (Printf.sprintf "%s is bound to an expression of this type in a let statement" (string_of_var x));
       display_state state l (Printf.sprintf "got back a principal type of %s for the variable %s" (string_of_type pt) (string_of_var x));
-      let e2 = instance_sub state pt x e2 in
+      (match pt with
+      | TypeVar _ ->
       tcheck state e2
+      | _ ->
+          if has_tv pt then let e2 = instance_sub state pt x e2 in tcheck state e2
+          else tcheck state e2
+      )
   | IUnit l ->
       display_state state l (Printf.sprintf "this is a unit literal, so has type unit");
       UnitType

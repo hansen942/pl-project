@@ -252,6 +252,14 @@ let rec ftv = function
 | Product tlist -> fold_left (fun acc x -> naive_list_union acc (ftv x)) [] tlist
 | SumType (name,args) -> fold_left (fun acc x -> naive_list_union acc (ftv x)) [] args
 
+let rec has_tv = function
+  | Fun (t1,t2) ->
+      has_tv t1 || has_tv t2
+  | TypeVar _ -> true
+  | Product tlist -> List.exists has_tv tlist
+  | SumType (name,args) -> List.exists has_tv args
+  | _ -> false
+
 let rec tsub t_new tvar = fun t ->
   match t with
   | TypeVar v -> if v = tvar then t_new else t
